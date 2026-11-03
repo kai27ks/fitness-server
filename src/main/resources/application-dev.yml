@@ -1,0 +1,30 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/fitness?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+    username: root
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema.sql
+      data-locations: classpath:data.sql
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+app:
+  # 开发环境直接把验证码返回给前端（模拟短信），生产必须关闭并接真实通道
+  sms-mock: true
+  jwt-secret: dev-jwt-secret-please-change-to-32-bytes-min!!
+  jwt-expire-days: 7
+  studio:
+    name: 03 健身工作室
+    address: 新建村美食城9号 e4
+    hours: 09:00 - 21:00
+    open-hour: 9
+    close-hour: 21

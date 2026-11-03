@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>私教工作室 · 会员端 UI 设计稿 V1</title>
+<style>
+:root{
+  --bg:#F4F6F8; --card:#FFFFFF; --ink:#1C2430; --sub:#8A93A0; --line:#EEF1F4;
+  --primary:#12C48B; --primary-deep:#0BA678; --grad:linear-gradient(135deg,#12C48B,#0E9F8A);
+  --dark:#17222B; --warn:#FF7A45; --blue:#4E8CFF; --purple:#8B6CF0;
+  --r-lg:20px; --r-md:14px; --shadow:0 8px 24px rgba(23,34,43,.08);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased}
+body{background:#E9EDF1;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--ink);padding:32px 24px 64px}
+.page-title{text-align:center;margin-bottom:6px;font-size:26px;font-weight:700;letter-spacing:1px}
+.page-sub{text-align:center;color:var(--sub);font-size:13px;margin-bottom:36px}
+.board{display:flex;gap:34px;flex-wrap:wrap;justify-content:center}
+.screen-wrap{display:flex;flex-direction:column;align-items:center;gap:14px}
+.screen-label{font-size:14px;font-weight:600;text-align:center}
+.screen-label small{display:block;font-weight:400;color:var(--sub);font-size:12px;margin-top:3px}
+.phone{width:375px;height:812px;background:var(--bg);border-radius:44px;box-shadow:0 24px 60px rgba(23,34,43,.25);overflow:hidden;position:relative;flex-shrink:0;border:10px solid #10151B;display:flex;flex-direction:column}
+.notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:150px;height:26px;background:#10151B;border-radius:0 0 18px 18px;z-index:99}
+.scr{flex:1;display:flex;flex-direction:column;overflow:hidden;padding-top:26px}
+
+/* ===== 通用 ===== */
+.nav-top{padding:14px 20px;display:flex;align-items:center;justify-content:space-between;font-size:17px;font-weight:600}
+.icon-btn{width:32px;height:32px;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow)}
+.scroll{flex:1;overflow:hidden;padding:0 16px 90px}
+.tabbar{position:absolute;bottom:0;left:0;right:0;height:76px;background:var(--dark);border-radius:26px 26px 0 0;display:flex;padding:10px 8px 18px;z-index:10}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;color:#5C6B78;font-size:10.5px}
+.tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tab.on{color:var(--primary);font-weight:600}
+.tab .dot{width:16px;height:3px;border-radius:2px;background:transparent;margin-top:1px}
+.tab.on .dot{background:var(--primary)}
+.pill{font-size:10.5px;padding:3px 9px;border-radius:99px;font-weight:600}
+.pill.wait{background:#E7F9F1;color:var(--primary-deep)}
+.pill.done{background:#EEF1F4;color:#9AA6B2}
+.pill.info{background:#EAF1FF;color:var(--blue)}
+.pill.cancel{background:#F3F5F7;color:#C3CAD3}
+.pill.warn{background:#FFF0E9;color:var(--warn)}
+.btn{height:48px;border-radius:16px;background:var(--grad);color:#fff;font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 22px rgba(18,196,139,.32);letter-spacing:2px}
+.btn-ghost{height:36px;padding:0 18px;border-radius:11px;border:1.5px solid var(--primary);color:var(--primary-deep);background:#fff;font-size:14px;font-weight:600;display:inline-flex;align-items:center}
+.btn-ghost.red{border-color:#FFB394;color:var(--warn)}
+.avatar{border-radius:50%;background:linear-gradient(135deg,#D9E4EF,#C2D2E0);display:flex;align-items:center;justify-content:center;color:#8FA2B5;font-weight:600;flex-shrink:0}
+.card{background:var(--card);border-radius:var(--r-lg);box-shadow:var(--shadow)}
+.sec-title{display:flex;align-items:baseline;justify-content:space-between;margin:22px 2px 12px}
+.sec-title b{font-size:16px}
+.sec-title a{color:var(--sub);font-size:12px;text-decoration:none}
+.date-strip{display:flex;gap:8px;padding:6px 16px 14px}
+.date-chip{width:52px;height:64px;border-radius:16px;background:#fff;box-shadow:var(--shadow);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;color:var(--sub)}
+.date-chip b{font-size:16px;color:var(--ink)}
+.date-chip.on{background:var(--grad);color:#E8FFF6}
+.date-chip.on b{color:#fff}
+.slot{background:#fff;border-radius:var(--r-md);box-shadow:var(--shadow);padding:13px 14px;display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.slot .time{width:56px;text-align:center}
+.slot .time b{font-size:16px}
+.slot .time small{display:block;color:var(--sub);font-size:10.5px;margin-top:2px}
+.slot .info{flex:1;min-width:0}
+.slot .info b{font-size:14px}
+.slot .info small{display:block;color:var(--sub);font-size:11.5px;margin-top:3px}
+.slot-group{margin:16px 2px 8px;font-size:13px;font-weight:700;color:var(--sub);display:flex;align-items:center;gap:8px}
+.slot-group::after{content:"";flex:1;height:1px;background:var(--line)}
+.coach-bar{display:flex;align-items:center;gap:12px;background:#fff;border-radius:16px;box-shadow:var(--shadow);padding:12px 14px}
+.pkg-pick{display:flex;gap:8px;margin-top:10px}
+.pp{font-size:11.5px;padding:7px 13px;border-radius:99px;background:#fff;box-shadow:var(--shadow);color:var(--sub)}
+.pp.on{background:#E7F9F1;color:var(--primary-deep);font-weight:700;border:1.5px solid var(--primary)}
+.pp.off{opacity:.5}
+.slots{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.sl{height:46px;border-radius:12px;background:#fff;box-shadow:var(--shadow);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:13px;font-weight:600}
+.sl small{font-size:9.5px;font-weight:400;color:var(--sub)}
+.sl.on{background:var(--grad);color:#fff;box-shadow:0 8px 18px rgba(18,196,139,.35)}
+.sl.on small{color:#D8FFF2}
+.sl.mine{background:#E7F9F1;color:var(--primary-deep);border:1.5px solid var(--primary)}
+.sl.mine small{color:var(--primary-deep)}
+.sl.off{background:#E9EDF1;color:#B7BFC8;box-shadow:none}
+.sl.off small{color:#B7BFC8}
+.legend{display:flex;gap:14px;font-size:11px;color:var(--sub);margin:14px 2px 0;flex-wrap:wrap}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:4px;vertical-align:-1px;margin-right:5px}
+.pick-bar{position:absolute;left:0;right:0;bottom:76px;background:#fff;box-shadow:0 -8px 24px rgba(23,34,43,.08);padding:12px 16px;display:flex;align-items:center;gap:12px;z-index:11;border-radius:22px 22px 0 0}
+
+/* ===== 1 首页 ===== */
+.home-hero{padding:56px 20px 20px;color:#fff;background:linear-gradient(150deg,#17222B,#22343C 55%,#1C4A3E);border-radius:0 0 30px 30px;position:relative}
+.home-hero .greet{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.home-hero .greet .avatar{width:42px;height:42px;font-size:16px;color:#fff;background:rgba(255,255,255,.16);border:1.5px solid rgba(255,255,255,.3)}
+.home-hero .greet b{font-size:17px}
+.home-hero .greet small{display:block;font-size:11.5px;opacity:.6;margin-top:2px}
+.home-pkg{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);backdrop-filter:blur(4px);border-radius:18px;padding:14px 16px;display:flex;align-items:center;gap:14px}
+.home-pkg .ring{width:50px;height:50px;border-radius:50%;background:conic-gradient(#fff 0 62%,rgba(255,255,255,.2) 62% 100%);display:flex;align-items:center;justify-content:center}
+.home-pkg .ring i{width:38px;height:38px;border-radius:50%;background:#1E3A34;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.home-pkg .t{flex:1}
+.home-pkg .t b{font-size:14px}
+.home-pkg .t small{display:block;font-size:11px;opacity:.65;margin-top:3px}
+.quick{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:-26px;padding:0 16px;position:relative;z-index:2}
+.qi{background:#fff;border-radius:var(--r-md);box-shadow:var(--shadow);padding:15px 0 12px;display:flex;flex-direction:column;align-items:center;gap:7px;font-size:12px;color:#3A4450}
+.qi i{width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center}
+.qi i svg{width:19px;height:19px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.i-green{background:linear-gradient(135deg,#12C48B,#0BA678)}
+.i-orange{background:linear-gradient(135deg,#FF9A5A,#FF7A45)}
+.i-blue{background:linear-gradient(135deg,#6AA5FF,#4E8CFF)}
+.activity{display:flex;gap:10px;overflow:hidden}
+.act{width:150px;flex-shrink:0;border-radius:var(--r-md);overflow:hidden;box-shadow:var(--shadow);background:#fff}
+.act .img{height:86px;background:linear-gradient(135deg,#2E4A42,#173029);display:flex;align-items:center;justify-content:center;font-size:26px}
+.act .p{padding:10px 12px}
+.act .p b{font-size:12.5px;display:block}
+.act .p small{color:var(--sub);font-size:10.5px;display:block;margin-top:4px}
+.coach-row{display:flex;gap:14px;overflow:hidden}
+.coach-c{width:76px;flex-shrink:0;text-align:center}
+.coach-c .avatar{width:64px;height:64px;margin:0 auto 6px;font-size:20px;position:relative}
+.coach-c .avatar em{position:absolute;right:-2px;bottom:-2px;width:18px;height:18px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;box-shadow:var(--shadow)}
+.coach-c span{font-size:12px}
+.coach-c small{display:block;color:var(--sub);font-size:10px;margin-top:1px}
+.contact{background:#fff;border-radius:var(--r-md);box-shadow:var(--shadow);padding:14px 16px;display:flex;align-items:center;gap:12px}
+.contact .info{flex:1}
+.contact .info b{font-size:14px}
+.contact .info small{display:block;color:var(--sub);font-size:11.5px;margin-top:4px}
+.call{width:40px;height:40px;border-radius:13px;background:#FFF0E9;display:flex;align-items:center;justify-content:center}
+
+/* ===== 2 约课 ===== */
+.coach-filter{display:flex;gap:14px;padding:4px 16px 14px;overflow:hidden}
+.cf{text-align:center;flex-shrink:0}
+.cf .avatar{width:52px;height:52px;font-size:17px;position:relative}
+.cf.on .avatar{outline:3px solid var(--primary);outline-offset:2px}
+.cf span{display:block;font-size:11px;margin-top:5px;color:var(--sub)}
+.cf.on span{color:var(--primary-deep);font-weight:700}
+.course{background:#fff;border-radius:var(--r-md);box-shadow:var(--shadow);padding:14px;display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.course .avatar{width:46px;height:46px;font-size:16px}
+.course .info{flex:1;min-width:0}
+.course .info .n{display:flex;align-items:center;gap:7px}
+.course .info b{font-size:14.5px}
+.course .info small{display:block;color:var(--sub);font-size:11.5px;margin-top:4px}
+.course .time-l{color:var(--primary-deep);font-weight:700;font-size:13px}
+
+/* ===== 3 弹窗 ===== */
+.mask{position:absolute;inset:0;background:rgba(15,22,30,.45);z-index:20}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:26px 26px 0 0;z-index:21;padding:20px 20px 30px}
+.sheet .grab{width:40px;height:4px;border-radius:2px;background:#E3E8ED;margin:0 auto 16px}
+.sheet h3{font-size:17px;margin-bottom:14px}
+.conf-row{display:flex;align-items:center;gap:12px;background:#F7F9FA;border-radius:14px;padding:12px 14px;margin-bottom:10px;font-size:13.5px}
+.conf-row .k{color:var(--sub);width:64px;flex-shrink:0;font-size:12px}
+.conf-row .v{font-weight:600}
+.conf-row .v small{display:block;font-weight:400;color:var(--sub);font-size:11px;margin-top:2px}
+.pkg-sel{display:flex;gap:8px;margin-bottom:6px}
+.ps{flex:1;border:1.5px solid var(--line);border-radius:12px;padding:9px 0;text-align:center;font-size:11.5px;color:var(--sub)}
+.ps b{display:block;font-size:14px;color:var(--ink)}
+.ps.on{border-color:var(--primary);background:#E7F9F1;color:var(--primary-deep)}
+.ps.on b{color:var(--primary-deep)}
+
+/* ===== 4 我的预约 ===== */
+.my-tabs{display:flex;background:#fff;margin:4px 16px 14px;border-radius:14px;padding:4px;box-shadow:var(--shadow)}
+.my-tabs span{flex:1;text-align:center;padding:10px 0;font-size:13.5px;border-radius:11px;color:var(--sub)}
+.my-tabs span.on{background:var(--grad);color:#fff;font-weight:600}
+.bk{background:#fff;border-radius:var(--r-md);box-shadow:var(--shadow);padding:14px 16px;margin-bottom:10px}
+.bk .top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.bk .top b{font-size:14.5px;flex:1}
+.bk .meta{display:flex;align-items:center;gap:10px;background:#F7F9FA;border-radius:12px;padding:10px 12px;font-size:12.5px;color:#3A4450}
+.bk .meta b{color:var(--primary-deep)}
+.bk .ops{display:flex;justify-content:flex-end;gap:10px;margin-top:12px}
+.empty{text-align:center;padding:90px 0 0;color:var(--sub)}
+.empty .e-ico{width:96px;height:96px;border-radius:50%;background:#fff;box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;margin:0 auto 18px}
+.empty .e-ico svg{width:40px;height:40px;stroke:#C6CDD5;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.empty p{font-size:13px}
+.empty .btn-ghost{margin-top:20px}
+
+/* ===== 5 课包 ===== */
+.pkg-hero{margin:4px 16px 0;background:linear-gradient(135deg,#12C48B,#0B8F7E);border-radius:22px;padding:22px 20px;color:#fff;position:relative;overflow:hidden}
+.pkg-hero::after{content:"";position:absolute;right:-40px;top:-40px;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.12)}
+.pkg-hero small{font-size:12px;opacity:.8}
+.pkg-hero h2{font-size:22px;margin:8px 0 16px}
+.pkg-hero .nums{display:flex;align-items:flex-end;gap:6px}
+.pkg-hero .nums b{font-size:44px;line-height:1}
+.pkg-hero .nums span{font-size:13px;opacity:.75;padding-bottom:4px}
+.pkg-hero .bar{height:6px;border-radius:3px;background:rgba(255,255,255,.25);margin-top:16px}
+.pkg-hero .bar i{display:block;height:100%;width:62%;border-radius:3px;background:#fff}
+.pkg-sw{display:flex;gap:8px;padding:14px 16px 2px}
+.pkg-sw span{font-size:11.5px;padding:5px 13px;border-radius:99px;background:#fff;color:var(--sub);box-shadow:var(--shadow)}
+.pkg-sw span.on{background:var(--dark);color:#fff}
+.pkg-sw span.plus{color:var(--primary-deep);font-weight:700}
+.flow{background:#fff;border-radius:var(--r-md);box-shadow:var(--shadow);padding:4px 16px}
+.fw{display:flex;gap:12px;padding:13px 0;border-bottom:1px solid var(--line);align-items:center}
+.fw:last-child{border:none}
+.fw .ic{width:34px;height:34px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.fw .ic svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.fw .t{flex:1;font-size:13.5px}
+.fw .t small{display:block;color:var(--sub);font-size:11px;margin-top:2px}
+.fw .d{text-align:right}
+.fw .d b{font-size:13.5px;color:var(--primary-deep)}
+.fw .d b.m{color:var(--warn)}
+.fw .d small{display:block;color:var(--sub);font-size:10.5px;margin-top:2px}
+
+/* ===== 6 教练详情 ===== */
+.cd-hero{height:250px;background:linear-gradient(160deg,#22343C,#173029);position:relative;padding:60px 20px 0;color:#fff}
+.cd-hero .ava{width:78px;height:78px;border-radius:26px;background:linear-gradient(135deg,#12C48B,#0B8F7E);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700;box-shadow:0 12px 26px rgba(18,196,139,.4)}
+.cd-hero h2{font-size:20px;margin-top:14px}
+.cd-hero .tags{display:flex;gap:8px;margin-top:10px}
+.cd-hero .tags span{font-size:10.5px;padding:4px 11px;border-radius:99px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22)}
+.cd-body{padding:16px}
+.cd-sec{background:#fff;border-radius:var(--r-md);box-shadow:var(--shadow);padding:16px;margin-bottom:12px}
+.cd-sec h4{font-size:14px;margin-bottom:10px}
+.cd-sec p{font-size:13px;color:#4A5560;line-height:1.8}
+.qual{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.qual:last-child{border:none;padding-bottom:0}
+.qual .qi2{width:42px;height:52px;border-radius:9px;background:linear-gradient(135deg,#EAF6FF,#D7EBFF);display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.qual .t{flex:1;font-size:13px}
+.qual .t small{display:block;color:var(--sub);font-size:11px;margin-top:3px}
+.sig{border:1.5px dashed #D8DEE4;border-radius:12px;padding:10px;display:flex;align-items:center;justify-content:center;height:74px;color:#B7BFC8;font-size:12px;letter-spacing:6px;font-style:italic}
+
+/* ===== 7 我的 ===== */
+.me-hero{background:linear-gradient(150deg,#17222B,#24403A 70%,#155E48);border-radius:0 0 30px 30px;padding:60px 22px 58px;color:#fff;position:relative;margin-top:-26px}
+.me-hero .row{display:flex;align-items:center;gap:14px}
+.me-hero .avatar{width:56px;height:56px;font-size:19px;color:#fff;background:rgba(255,255,255,.16);border:1.5px solid rgba(255,255,255,.3)}
+.me-hero b{font-size:18px}
+.me-hero small{display:block;font-size:12px;opacity:.6;margin-top:4px}
+.me-hero .tag{position:absolute;right:20px;top:62px;font-size:11px;padding:4px 12px;border-radius:99px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25)}
+.me-card{position:absolute;left:16px;right:16px;bottom:-30px;background:#fff;border-radius:var(--r-lg);box-shadow:0 14px 30px rgba(23,34,43,.16);padding:16px 18px;display:flex;justify-content:space-between;text-align:center}
+.me-card div b{font-size:18px;color:var(--primary-deep)}
+.me-card div small{display:block;color:var(--sub);font-size:11px;margin-top:2px}
+.menu{margin:48px 16px 0;background:#fff;border-radius:var(--r-lg);box-shadow:var(--shadow);overflow:hidden}
+.mi{display:flex;align-items:center;gap:12px;padding:15px 18px;border-bottom:1px solid var(--line);font-size:14.5px}
+.mi:last-child{border:none}
+.mi i{width:34px;height:34px;border-radius:11px;display:flex;align-items:center;justify-content:center}
+.mi i svg{width:17px;height:17px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.mi .arr{margin-left:auto;color:#C6CDD5}
+</style>
+</head>
+<body>
+
+<div class="page-title">私教工作室 · 会员端 UI 设计稿</div>
+<div class="page-sub">与视觉规范 V1 同源 · 7 个核心界面 · 底部导航：首页 / 约课 / 课包 / 我的</div>
+
+<div class="board">
+
+<!-- ========== 1 首页 ========== -->
+<div class="screen-wrap">
+  <div class="phone"><div class="notch"></div><div class="scr">
+    <div class="home-hero">
+      <div class="greet">
+        <div class="avatar">陈</div>
+        <div><b>你好，陈筱鹭</b><small>今天也要动起来 💪</small></div>
+      </div>
+      <div class="home-pkg">
+        <div class="ring"><i>18节</i></div>
+        <div class="t"><b>基础私教 · 课包</b><small>剩余 18 / 30 节 · 有效期至 2027-03-01</small></div>
+        <span class="pill" style="background:rgba(255,255,255,.18);color:#fff">去约课 ›</span>
+      </div>
+    </div>
+    <div class="quick">
+      <div class="qi"><i class="i-green"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4M16 2v4M3 10h18"/></svg></i>立即约课</div>
+      <div class="qi"><i class="i-blue"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4M16 2v4M3 10h18M3 15h18"/></svg></i>我的预约</div>
+      <div class="qi"><i class="i-orange"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20"/></svg></i>我的课包</div>
+    </div>
+    <div class="scroll" style="padding-top:0">
+      <div class="sec-title" style="margin-top:16px"><b>最新活动</b><a>更多 ›</a></div>
+      <div class="activity">
+        <div class="act"><div class="img">🏋️</div><div class="p"><b>双11 私教续课季</b><small>续 20 节赠 2 节 · 至 11-11</small></div></div>
+        <div class="act"><div class="img" style="background:linear-gradient(135deg,#3D2E4E,#221A33)">🧘</div><div class="p"><b>周末拉伸公开课</b><small>周六 15:00 · 免费</small></div></div>
+      </div>
+      <div class="sec-title"><b>教练团队</b><a>全部 6 位 ›</a></div>
+      <div class="coach-row">
+        <div class="coach-c"><div class="avatar">陈<em>✓</em></div><span>陈筱鹭</span><small>基础私教</small></div>
+        <div class="coach-c"><div class="avatar">王<em>✓</em></div><span>王毅峰</span><small>拉伸康复</small></div>
+        <div class="coach-c"><div class="avatar">林<em>✓</em></div><span>林珊</span><small>美臀塑形</small></div>
+        <div class="coach-c"><div class="avatar">徐<em>✓</em></div><span>徐正週</span><small>力量增肌</small></div>
+      </div>
+      <div class="sec-title"><b>联系我们</b></div>
+      <div class="contact">
+        <div class="info"><b>03 健身工作室</b><small>📍 新建村美食城9号 e4 · 营业 09:00 - 21:00</small></div>
+        <div class="call"><svg width="18" height="18" viewBox="0 0 24 24" stroke="#FF7A45" fill="none" stroke-width="2" stroke-linecap="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.9.5 2.8.7a2 2 0 0 1 1.7 2z"/></svg></div>
+      </div>
+    </div>
+    <div class="tabbar">
+      <div class="tab on"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>首页<div class="dot"></div></div>
+      <div class="tab"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>约课<div class="dot"></div></div>
+      <div class="tab"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20"/></svg>课包<div class="dot"></div></div>
+      <div class="tab"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>我的<div class="dot"></div></div>
+    </div>
+  </div></div>
+  <div class="screen-label">会员端首页<small>顶部悬浮课包卡 + 三宫格入口 + 活动/教练/联系</small></div>
+</div>
+
+<!-- ========== 2 约课排期 ========== -->
+<div class="screen-wrap">
+  <div class="phone"><div class="notch"></div><div class="scr">
+    <div class="nav-top"><div class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" stroke="#1C2430" fill="none" stroke-width="2.4"><path d="M15 18l-6-6 6-6"/></svg></div>约课<div class="icon-btn"><svg width="15" height="15" viewBox="0 0 24 24" stroke="#1C2430" fill="none" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg></div></div>
+    <div class="date-strip">
+      <div class="date-chip"><span>周一</span><b>02</b></div>
+      <div class="date-chip on"><span>今天</span><b>03</b></div>
+      <div class="date-chip"><span>周三</span><b>04</b></div>
+      <div class="date-chip"><span>周四</span><b>05</b></div>
+      <div class="date-chip"><span>周五</span><b>06</b></div>
+    </div>
+    <div class="scroll" style="padding-top:6px">
+      <div class="coach-bar">
+        <div class="avatar" style="width:46px;height:46px;font-size:16px">陈</div>
+        <div style="flex:1">
+          <b style="font-size:14.5px">陈筱鹭 <span style="font-size:11px;color:var(--primary-deep)">· 我的专属教练</span></b>
+          <div style="font-size:11.5px;color:var(--sub);margin-top:3px">管理员改绑请联系前台 · 剩余 18 节</div>
+        </div>
+        <span class="pill wait">今日正常上班</span>
+      </div>
+      <div class="pkg-pick">
+        <span class="pp on">基础私教 · 18 节</span>
+        <span class="pp off">拉伸课程 · 0 节</span>
+      </div>
+      <div class="sec-title" style="margin:16px 2px 10px"><b>选择时间</b><a>营业 09:00 - 21:00</a></div>
+      <div class="slots">
+        <div class="sl off">09:00<small>已被约</small></div>
+        <div class="sl off">10:00<small>已被约</small></div>
+        <div class="sl off">11:00<small>已被约</small></div>
+        <div class="sl">12:00</div>
+        <div class="sl">13:00</div>
+        <div class="sl on">14:00<small>已选中</small></div>
+        <div class="sl">15:00</div>
+        <div class="sl mine">16:00<small>我的预约</small></div>
+        <div class="sl">17:00</div>
+        <div class="sl">18:00</div>
+        <div class="sl">19:00</div>
+        <div class="sl off">20:00<small>教练请假</small></div>
+      </div>
+      <div class="legend">
+        <span><i style="background:#fff;box-shadow:var(--shadow)"></i>可约</span>
+        <span><i style="background:#E9EDF1"></i>已被约 · 不可选</span>
+        <span><i style="background:#E7F9F1;border:1.5px solid var(--primary)"></i>我的预约</span>
+        <span><i style="background:var(--grad)"></i>已选中</span>
+      </div>
+    </div>
+    <div class="pick-bar">
+      <div style="flex:1"><b style="font-size:13.5px">11月03日 14:00 - 15:00</b><small style="display:block;color:var(--sub);font-size:11px;margin-top:2px">基础私教 · 陈筱鹭 · 60 分钟</small></div>
+      <div class="btn" style="height:44px;flex:none;padding:0 26px;font-size:15px;letter-spacing:1px">下一步</div>
+    </div>
+    <div class="tabbar">
+      <div class="tab"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>首页<div class="dot"></div></div>
+      <div class="tab on"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>约课<div class="dot"></div></div>
+      <div class="tab"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20"/></svg>课包<div class="dot"></div></div>
+      <div class="tab"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>我的<div class="dot"></div></div>
+    </div>
+  </div></div>
+  <div class="screen-label">约课 · 自由选时段<small>专属教练上班即可约；被约/请假时段置灰，选中后底部条确认</small></div>
+</div>
+
+<!-- ========== 3 约课确认弹窗 ========== -->
+<div class="screen-wrap">
+  <div class="phone"><div class="notch"></div><div class="scr">
+    <div class="nav-top" style="opacity:.4"><div></div>约课<div></div></div>
+    <div class="mask"></div>
+    <div class="sheet">
+      <div class="grab"></div>
+      <h3>确认预约</h3>
+      <div class="conf-row"><span class="k">课程</span><span class="v">基础私教 · 60 分钟<small>教练 陈筱鹭（我的专属教练）</small></span></div>
+      <div class="conf-row"><span class="k">时间</span><span class="v">11月03日（今天） 14:00 - 15:00</span></div>
+      <div class="form-label" style="font-size:13px;font-weight:600;margin:4px 0 8px">选择课包</div>
+      <div class="pkg-sel">
+        <div class="ps on"><b>18 节</b>基础私教</div>
+        <div class="ps"><b>0 节</b>拉伸课程</div>
+        <div class="ps" style="color:var(--primary-deep);font-weight:700">+ 购买</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--sub);margin:12px 2px 16px">
+        <span style="color:var(--primary-deep)">✓</span>预约后不可改期；开课自动签到扣 1 节课时，开始前 2 小时内不可取消
+      </div>
+      <div class="btn">确认预约 · 通知我</div>
+    </div>
+  </div></div>
+  <div class="screen-label">约课确认 · 底部弹窗<small>课包选择 + 扣课/取消规则明示，预约成功发公众号通知</small></div>
+</div>
+
+<!-- ========== 4 我的预约 ========== -->
+<div class="screen-wrap">
+  <div class="phone"><div class="notch"></div><div class="scr">
+    <div class="nav-top"><div class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" stroke="#1C2430" fill="none" stroke-width="2.4"><path d="M15 18l-6-6 6-6"/></svg></div>我的预约<div style="width:32px"></div></div>
+    <div class="my-tabs"><span class="on">全部预约</span><span>待上课</span><span>已完成</span></div>
+    <div class="scroll" style="padding-top:0">
+      <div class="bk">
+        <div class="top"><div class="avatar" style="width:38px;height:38px;font-size:14px">陈</div><b>基础私教 · 陈筱鹭</b><span class="pill wait">待上课</span></div>
+        <div class="meta">📅 <b>11月05日</b> 周四 09:30 - 10:30<span style="margin-left:auto;color:var(--sub)">还剩 2 天</span></div>
+        <div class="ops"><span class="btn-ghost red">取消预约</span></div>
+      </div>
+      <div class="bk">
+        <div class="top"><div class="avatar" style="width:38px;height:38px;font-size:14px">陈</div><b>基础私教 · 陈筱鹭</b><span class="pill info">今日待上</span></div>
+        <div class="meta">📅 <b>11月03日</b> 今天 14:00 - 15:00<span style="margin-left:auto;color:var(--warn)">约 6 小时后</span></div>
+        <div class="ops"><span class="btn-ghost red" style="opacity:.5;border-style:dashed">已过可取消时间</span></div>
+      </div>
+      <div class="bk">
+        <div class="top"><div class="avatar" style="width:38px;height:38px;font-size:14px">陈</div><b>基础私教 · 陈筱鹭</b><span class="pill done">已完成</span></div>
+        <div class="meta">📅 <b>11月02日</b> 周一 15:00 - 16:00<span style="margin-left:auto;color:var(--sub)">已扣 1 节</span></div>
+      </div>
+      <div class="bk" style="opacity:.75">
+        <div class="top"><div class="avatar" style="width:38px;height:38px;font-size:14px">林</div><b>拉伸课程 · 林珊</b><span class="pill cancel">已取消</span></div>
+        <div class="meta">📅 <b>10月30日</b> 周六 10:00 - 11:00<span style="margin-left:auto;color:var(--sub)">会员取消 · 不扣课时</span></div>
+      </div>
+    </div>
+    <div class="tabbar">
+      <div class="tab"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>首页<div class="dot"></div></div>
+      <div class="tab"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>约课<div class="dot"></div></div>
+      <div class="tab"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20"/></svg>课包<div class="dot"></div></div>
+      <div class="tab on"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>我的<div class="dot"></div></div>
+    </div>
+  </div></div>
+  <div class="screen-label">我的预约<small>取消按钮按 2 小时规则实时可用/禁用，规则透明化</small></div>
+</div>
+
+<!-- ========== 5 我的课包 ========== -->
+<div class="screen-wrap">
+  <div class="phone"><div class="notch"></div><div class="scr">
+    <div class="nav-top"><div class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" stroke="#1C2430" fill="none" stroke-width="2.4"><path d="M15 18l-6-6 6-6"/></svg></div>我的课包<div style="width:32px"></div></div>
+    <div class="pkg-hero">
+      <small>陈筱鹭 · 基础私教</small>
+      <h2>剩余课时</h2>
+      <div class="nums"><b>18</b><span>/ 30 节</span></div>
+      <div class="bar"><i></i></div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;opacity:.75;margin-top:8px">
+        <span>已消 12 节</span><span>有效期至 2027-03-01</span>
+      </div>
+    </div>
+    <div class="pkg-sw"><span class="on">消课记录</span><span>预约记录</span><span class="plus">＋ 续课</span></div>
+    <div class="scroll" style="padding-top:10px">
+      <div class="flow">
+        <div class="fw">
+          <div class="ic i-green"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></div>
+          <div class="t">完成基础私教 1 节<small>11-02 15:00 · 教练 陈筱鹭</small></div>
+          <div class="d"><b class="m">-1 节</b><small>自动签到</small></div>
+        </div>
+        <div class="fw">
+          <div class="ic i-blue"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4M16 2v4M3 10h18"/></svg></div>
+          <div class="t">预约 11-05 09:30 基础私教<small>11-02 18:11 · 已通知</small></div>
+          <div class="d"><b style="color:var(--sub)">预占</b><small>开课扣减</small></div>
+        </div>
+        <div class="fw">
+          <div class="ic i-orange"><svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></div>
+          <div class="t">取消 10-30 10:00 拉伸课程<small>10-29 21:40 · 会员取消</small></div>
+          <div class="d"><b style="color:var(--sub)">无变动</b><small>未扣课时</small></div>
+        </div>
+        <div class="fw">
+          <div class="ic i-green"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></div>
+          <div class="t">完成基础私教 1 节<small>10-28 19:00 · 教练 陈筱鹭</small></div>
+          <div class="d"><b class="m">-1 节</b><small>自动签到</small></div>
+        </div>
+        <div class="fw">
+          <div class="ic i-green"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div>
+          <div class="t">购买课包 基础私教 30 节<small>10-20 · 订单 #20261020-03</small></div>
+          <div class="d"><b>+30 节</b><small>¥ 9,600</small></div>
+        </div>
+      </div>
+    </div>
+    <div class="tabbar">
+      <div class="tab"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>首页<div class="dot"></div></div>
+      <div class="tab"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>约课<div class="dot"></div></div>
+      <div class="tab on"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20"/></svg>课包<div class="dot"></div></div>
+      <div class="tab"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>我的<div class="dot"></div></div>
+    </div>
+  </div></div>
+  <div class="screen-label">我的课包<small>对应"卡服务"：课时卡 + 消课流水，每笔变动可追溯</small></div>
+</div>
+
+<!-- ========== 6 教练详情 ========== -->
+<div class="screen-wrap">
+  <div class="phone"><div class="notch"></div><div class="scr">
+    <div class="cd-hero">
+      <div class="ava">陈</div>
+      <h2>陈筱鹭</h2>
+      <div class="tags"><span>🏅 高级私教认证</span><span>6 年教龄</span><span>专长 · 体态矫正</span></div>
+    </div>
+    <div class="cd-body">
+      <div class="cd-sec">
+        <h4>教练简介</h4>
+        <p>6 年一对一私教经验，累计授课 8000+ 节。擅长体态矫正、产后恢复与增肌减脂，主张「先建立动作模式，再上强度」，带训风格细致耐心。</p>
+      </div>
+      <div class="cd-sec">
+        <h4>专业资质</h4>
+        <div class="qual"><div class="qi2">🏅</div><div class="t">ACE 美国运动委员会私人教练认证<small>证书编号 ACE-TR-82317 · 有效期至 2028-05</small></div></div>
+        <div class="qual"><div class="qi2">📋</div><div class="t">FMS 功能性动作筛查 Level 2<small>证书编号 FMS-L2-1145 · 长期有效</small></div></div>
+      </div>
+      <div class="btn" style="margin-top:2px">预约陈教练</div>
+    </div>
+  </div></div>
+  <div class="screen-label">教练详情<small>资质列表 + 简介电子签名，对应「教练介绍」模块</small></div>
+</div>
+
+<!-- ========== 7 我的 ========== -->
+<div class="screen-wrap">
+  <div class="phone"><div class="notch"></div><div class="scr">
+    <div class="me-hero">
+      <div class="row">
+        <div class="avatar">陈</div>
+        <div><b>陈筱鹭</b><small>138****2210 · 会员 386 天</small></div>
+      </div>
+      <span class="tag">会员</span>
+      <div class="me-card">
+        <div><b>18</b><small>剩余课时</small></div>
+        <div><b>26</b><small>累计消课</small></div>
+        <div><b>2</b><small>待上课</small></div>
+        <div><b>1</b><small>张课包</small></div>
+      </div>
+    </div>
+    <div class="scroll" style="padding-top:0">
+      <div class="menu" style="margin-top:52px">
+        <div class="mi"><i class="i-green"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4M16 2v4M3 10h18"/></svg></i>我的预约<span class="arr">›</span></div>
+        <div class="mi"><i class="i-blue"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20"/></svg></i>我的课包<span class="arr">›</span></div>
+        <div class="mi"><i class="i-purple"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></i>消息通知<span class="arr">›</span></div>
+        <div class="mi"><i class="i-orange"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg></i>个人资料<span class="arr">›</span></div>
+        <div class="mi"><i class="i-green"><svg viewBox="0 0 24 24"><path d="M22 11.1V12a10 10 0 1 1-5.9-9.1"/><path d="M22 4L12 14l-3-3"/></svg></i>联系教练<span class="arr">›</span></div>
+      </div>
+      <div style="text-align:center;color:#B7BFC8;font-size:11px;margin-top:20px">03 健身工作室 · V1.0</div>
+    </div>
+    <div class="tabbar">
+      <div class="tab"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>首页<div class="dot"></div></div>
+      <div class="tab"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>约课<div class="dot"></div></div>
+      <div class="tab"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20"/></svg>课包<div class="dot"></div></div>
+      <div class="tab on"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>我的<div class="dot"></div></div>
+    </div>
+  </div></div>
+  <div class="screen-label">我的 · 会员中心<small>个人数据悬浮卡，入口对应会员端全部功能</small></div>
+</div>
+
+</div>
+</body>
+</html>
