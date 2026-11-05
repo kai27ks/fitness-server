@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>私教工作室 · 会员风采展示 UI 设计稿</title>
+<style>
+:root{
+  --bg:#F4F6F8; --card:#FFFFFF; --ink:#1C2430; --sub:#8A93A0; --line:#EEF1F4;
+  --primary:#12C48B; --primary-deep:#0BA678; --grad:linear-gradient(135deg,#12C48B,#0E9F8A);
+  --dark:#17222B; --warn:#FF7A45; --blue:#4E8CFF; --purple:#8B6CF0;
+  --r-lg:20px; --r-md:14px; --shadow:0 8px 24px rgba(23,34,43,.08);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-font-smoothing:antialiased}
+body{background:#E9EDF1;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--ink);padding:32px 24px 64px}
+.page-title{text-align:center;margin-bottom:6px;font-size:26px;font-weight:700;letter-spacing:1px}
+.page-sub{text-align:center;color:var(--sub);font-size:13px;margin-bottom:18px}
+.tokens{display:flex;gap:10px;justify-content:center;margin-bottom:34px;flex-wrap:wrap}
+.token{display:flex;align-items:center;gap:8px;background:#fff;border-radius:99px;padding:6px 14px 6px 6px;font-size:12px;color:var(--sub);box-shadow:var(--shadow)}
+.token i{width:22px;height:22px;border-radius:50%}
+.rule-chip{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:34px}
+.rc{background:#fff;border-radius:14px;padding:10px 16px;box-shadow:var(--shadow);font-size:12px;color:#3A4450}
+.rc b{color:var(--primary-deep);font-size:14px;margin-right:4px}
+.board{display:flex;gap:34px;flex-wrap:wrap;justify-content:center}
+.screen-wrap{display:flex;flex-direction:column;align-items:center;gap:14px}
+.screen-label{font-size:14px;font-weight:600;text-align:center}
+.screen-label small{display:block;font-weight:400;color:var(--sub);font-size:12px;margin-top:3px}
+.phone{width:375px;height:812px;background:var(--bg);border-radius:44px;box-shadow:0 24px 60px rgba(23,34,43,.25);overflow:hidden;position:relative;flex-shrink:0;border:10px solid #10151B;display:flex;flex-direction:column}
+.notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:150px;height:26px;background:#10151B;border-radius:0 0 18px 18px;z-index:99}
+.scr{flex:1;display:flex;flex-direction:column;overflow:hidden;padding-top:26px}
+
+/* ===== 通用 ===== */
+.nav-top{padding:14px 20px;display:flex;align-items:center;justify-content:space-between;font-size:17px;font-weight:600}
+.icon-btn{width:32px;height:32px;border-radius:10px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow)}
+.scroll{flex:1;overflow:hidden;padding:0 16px 90px}
+.pill{font-size:10.5px;padding:3px 9px;border-radius:99px;font-weight:600}
+.pill.wait{background:#E7F9F1;color:var(--primary-deep)}
+.pill.done{background:#EEF1F4;color:#9AA6B2}
+.pill.info{background:#EAF1FF;color:var(--blue)}
+.pill.cancel{background:#F3F5F7;color:#C3CAD3}
+.pill.warn{background:#FFF0E9;color:var(--warn)}
+.btn{height:48px;border-radius:16px;background:var(--grad);color:#fff;font-size:16px;font-weight:600;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 22px rgba(18,196,139,.32);letter-spacing:2px}
+.btn.off{background:#DCE2E8;box-shadow:none;color:#9AA6B2}
+.btn-ghost{height:36px;padding:0 18px;border-radius:11px;border:1.5px solid var(--primary);color:var(--primary-deep);background:#fff;font-size:13px;font-weight:600;display:inline-flex;align-items:center}
+.btn-ghost.red{border-color:#FFB394;color:var(--warn)}
+.avatar{border-radius:50%;background:linear-gradient(135deg,#D9E4EF,#C2D2E0);display:flex;align-items:center;justify-content:center;color:#8FA2B5;font-weight:600;flex-shrink:0}
+.card{background:var(--card);border-radius:var(--r-lg);box-shadow:var(--shadow)}
+.sec-title{display:flex;align-items:baseline;justify-content:space-between;margin:18px 2px 12px}
+.sec-title b{font-size:16px}
+.sec-title a{color:var(--sub);font-size:12px;text-decoration:none}
+
+/* 渐变占位图（模拟照片，纯 CSS 无外链） */
+.photo{position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;color:rgba(255,255,255,.9);font-size:30px}
+.photo::after{content:"";position:absolute;right:-30px;top:-30px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.13)}
+.p1{background:linear-gradient(150deg,#1E3A34,#12C48B 130%)}
+.p2{background:linear-gradient(150deg,#3A2E4A,#8B6CF0 130%)}
+.p3{background:linear-gradient(150deg,#2A3A4A,#4E8CFF 130%)}
+.p4{background:linear-gradient(150deg,#4A3020,#FF9A5A 130%)}
+.p5{background:linear-gradient(150deg,#17343A,#0E9F8A 130%)}
+.p6{background:linear-gradient(150deg,#3A2A38,#E46A8C 130%)}
+.ph-sm{height:120px;font-size:26px}
+.ph-md{height:158px}
+.ph-lg{height:210px;font-size:44px}
+
+/* ===== 1 广场 ===== */
+.mm-hero{background:linear-gradient(150deg,#17222B,#22343C 60%,#1C4A3E);border-radius:0 0 30px 30px;padding:14px 20px 26px;color:#fff}
+.mm-hero h2{font-size:20px;margin:12px 0 4px}
+.mm-hero p{font-size:11.5px;opacity:.6}
+.quota{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);border-radius:16px;padding:12px 14px;margin-top:16px}
+.quota .num{font-size:24px;font-weight:800}
+.quota .t{flex:1;font-size:12px;opacity:.85}
+.dots{display:flex;gap:6px}
+.dots i{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.25)}
+.dots i.on{background:var(--primary)}
+.mm-tabs{display:flex;background:#fff;margin:14px 16px 12px;border-radius:14px;padding:4px;box-shadow:var(--shadow)}
+.mm-tabs span{flex:1;text-align:center;padding:9px 0;font-size:13.5px;border-radius:11px;color:var(--sub)}
+.mm-tabs span.on{background:var(--grad);color:#fff;font-weight:600}
+.waterfall{columns:2;column-gap:10px;padding:0 16px}
+.mcard{background:#fff;border-radius:var(--r-md);box-shadow:var(--shadow);overflow:hidden;break-inside:avoid;margin-bottom:10px}
+.mcard .meta{padding:9px 10px 11px}
+.mcard .meta b{font-size:12.5px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mcard .foot{display:flex;align-items:center;gap:5px;margin-top:7px;color:var(--sub);font-size:10.5px}
+.mcard .foot .avatar{width:18px;height:18px;font-size:9px}
+.mcard .foot .cnt{margin-left:auto}
+.fab{position:absolute;right:18px;bottom:24px;width:54px;height:54px;border-radius:50%;background:var(--grad);color:#fff;font-size:26px;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 26px rgba(18,196,139,.42);z-index:12}
+
+/* ===== 2 详情 / 评论 ===== */
+.detail-hero{border-radius:0 0 22px 22px;overflow:hidden}
+.author{display:flex;align-items:center;gap:10px;padding:12px 16px 0}
+.author .avatar{width:36px;height:36px;font-size:13px}
+.author b{font-size:13.5px}
+.author small{display:block;color:var(--sub);font-size:10.5px;margin-top:2px}
+.desc{padding:10px 16px 12px;font-size:13px;line-height:1.7}
+.cmt-list{padding:0 16px 12px}
+.cmt{display:flex;gap:9px;padding:12px 0;border-bottom:1px solid var(--line)}
+.cmt:last-child{border:none}
+.cmt .avatar{width:30px;height:30px;font-size:11px}
+.cmt .c{flex:1;min-width:0}
+.cmt .c .n{font-size:12px;color:#4A5560;font-weight:600}
+.cmt .c .n em{font-style:normal;color:var(--sub);font-weight:400;margin-left:6px;font-size:10.5px}
+.cmt .c p{font-size:12.5px;margin-top:4px;line-height:1.6}
+.cmt .c .ops{font-size:10.5px;color:var(--sub);margin-top:5px}
+.cmt .c .ops span{margin-right:12px}
+.replies{margin-top:9px;background:#F7F9FA;border-radius:12px;padding:9px 10px}
+.reply{font-size:11.5px;line-height:1.7;color:#3A4450}
+.reply+.reply{margin-top:6px}
+.reply b{color:var(--blue);font-weight:600}
+.reply i{font-style:normal;color:var(--sub)}
+.cmt-bar{position:absolute;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);padding:12px 16px 18px;display:flex;align-items:center;gap:10px;z-index:12}
+.cmt-bar .inp{flex:1;height:38px;border-radius:99px;background:#F4F6F8;padding:0 14px;display:flex;align-items:center;font-size:12px;color:var(--sub)}
+.cmt-bar .send{width:38px;height:38px;border-radius:50%;background:var(--grad);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px}
+
+/* ===== 3 回复态 ===== */
+.reply-tip{background:#E7F9F1;border-radius:12px;padding:9px 12px;font-size:11.5px;color:var(--primary-deep);margin:0 16px 8px;display:flex;justify-content:space-between}
+.hl{background:#FFF8E8}
+.kbd{height:120px;background:#D9DEE4;display:flex;align-items:flex-end;justify-content:center;padding-bottom:10px;color:#9AA6B2;font-size:11px}
+
+/* ===== 4 发布 ===== */
+.up-preview{height:220px;border-radius:18px;margin:4px 16px 0}
+.compress{background:#fff;border-radius:var(--r-md);box-shadow:var(--shadow);padding:14px 16px;margin:12px 16px 0}
+.compress h4{font-size:13px;margin-bottom:10px}
+.cf-row{display:flex;align-items:center;gap:8px;font-size:12px;padding:7px 0;border-bottom:1px solid var(--line)}
+.cf-row:last-child{border:none}
+.cf-row .k{color:var(--sub);width:70px;flex-shrink:0;font-size:11.5px}
+.cf-row .v{flex:1}
+.cf-row .v b{color:var(--primary-deep)}
+.cf-row .arrow{color:#C6CDD5}
+.rule-list{background:#fff;border-radius:var(--r-md);box-shadow:var(--shadow);padding:14px 16px;margin:12px 16px 0}
+.rule-list h4{font-size:13px;margin-bottom:10px}
+.rl{display:flex;gap:8px;font-size:11.5px;color:#4A5560;padding:5px 0;line-height:1.5}
+.rl i{font-style:normal;color:var(--primary-deep);font-weight:700}
+.quota-line{display:flex;align-items:center;gap:12px;margin:12px 16px 0;font-size:12px;color:var(--sub)}
+.quota-line b{color:var(--ink);font-size:13px}
+.ta{background:#fff;border-radius:16px;box-shadow:var(--shadow);padding:14px;font-size:13px;color:#B7BFC8;min-height:76px;margin:12px 16px 0}
+
+/* ===== 5 异常态 ===== */
+.reject{background:#FFF0E9;border:1px solid #FFD9C2;border-radius:var(--r-md);padding:14px 16px;margin:12px 16px 0;display:flex;gap:10px}
+.reject b{color:var(--warn)}
+.reject .t{font-size:12px;color:#B4551F;line-height:1.7}
+.reject .t small{display:block;color:#C98257;margin-top:3px;font-size:11px}
+.quota-full{background:#fff;border-radius:var(--r-md);box-shadow:var(--shadow);padding:16px;margin:12px 16px 0;text-align:center}
+.quota-full .big{font-size:30px;font-weight:800;color:#B7BFC8}
+.quota-full p{font-size:12px;color:var(--sub);margin:6px 0 12px}
+
+/* ===== 6 我的发布 ===== */
+.mine-row{background:#fff;border-radius:var(--r-md);box-shadow:var(--shadow);padding:10px;display:flex;gap:11px;margin-bottom:10px}
+.mine-row .photo{width:76px;height:76px;border-radius:12px;font-size:20px;flex-shrink:0}
+.mine-row .info{flex:1;min-width:0}
+.mine-row .info b{font-size:13px;display:block}
+.mine-row .info small{color:var(--sub);font-size:11px;display:block;margin-top:4px}
+.mine-row .info .ops{display:flex;gap:8px;margin-top:9px;align-items:center}
+
+/* ===== 7 管理端审核 ===== */
+.review{background:#fff;border-radius:var(--r-md);box-shadow:var(--shadow);padding:12px;margin-bottom:12px}
+.review .top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.review .top .avatar{width:34px;height:34px;font-size:12px}
+.review .top b{font-size:13.5px;flex:1}
+.review .photo{height:150px;border-radius:12px}
+.review .ops{display:flex;gap:10px;margin-top:11px}
+.review .ops .btn-ghost{flex:1;justify-content:center;height:34px}
+</style>
+</head>
+<body>
+
+<div class="page-title">私教工作室 · 会员风采展示</div>
+<div class="page-sub">UI 设计稿 · 本期仅图片 / 评论与回复 · 7 屏（含 1 屏可选管理端）</div>
+
+<div class="tokens">
+  <span class="token"><i style="background:linear-gradient(135deg,#12C48B,#0E9F8A)"></i>主色 · 活力绿</span>
+  <span class="token"><i style="background:#17222B"></i>深墨蓝 · 头部</span>
+  <span class="token"><i style="background:#FF7A45"></i>强调 · 橙（异常）</span>
+  <span class="token"><i style="background:#4E8CFF"></i>链接 · 蓝（回复对象）</span>
+  <span class="token"><i style="background:#F4F6F8;border:1px solid #E3E8ED"></i>背景 · 雾灰</span>
+</div>
+
+<div class="rule-chip">
+  <span class="rc"><b>≤ 1 MB</b> 压缩后单图上限</span>
+  <span class="rc"><b>4 张/日</b> 每会员每日额度</span>
+  <span class="rc"><b>1920 px</b> 统一长边 / 等比压缩</span>
+  <span class="rc"><b>2 层</b> 评论 + 楼中楼回复</span>
+  <span class="rc"><b>0</b> 视频（本期不做）</span>
+</div>
+
+<div class="board">
+
+<!-- ========== 1 风采广场 ========== -->
+<div class="screen-wrap">
+  <div class="phone"><div class="notch"></div><div class="scr">
+    <div class="mm-hero">
+      <div class="nav-top" style="padding:0;color:#fff">
+        <div class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" stroke="#1C2430" fill="none" stroke-width="2.4"><path d="M15 18l-6-6 6-6"/></svg></div>
+        <span style="font-size:16px">会员风采</span>
+        <div class="icon-btn" style="font-size:11px;color:var(--sub)">我的</div>
+      </div>
+      <h2>记录每一次进步</h2>
+      <p>训练照 · 体态对比 · 打卡瞬间，仅工作室成员可见</p>
+      <div class="quota">
+        <div><div class="num">2<span style="font-size:12px;opacity:.7">/4</span></div></div>
+        <div class="t">今日还可发布 <b>2</b> 张<br><small style="opacity:.6;font-size:10px">每日 0 点重置</small></div>
+        <div class="dots"><i class="on"></i><i class="on"></i><i></i><i></i></div>
+      </div>
+    </div>
+
+    <div class="mm-tabs"><span class="on">广场</span><span>我的发布</span></div>
+
+    <div class="scroll" style="padding-top:0">
+      <div class="waterfall">
+        <div class="mcard">
+          <div class="photo p1 ph-md">🏋️‍♀️</div>
+          <div class="meta"><b>第 12 次私教，深蹲终于稳了</b>
+            <div class="foot"><div class="avatar">毛</div><span>毛文坊</span><span class="cnt">💬 6</span></div>
+          </div>
+        </div>
+        <div class="mcard">
+          <div class="photo p3 ph-sm">📸</div>
+          <div class="meta"><b>晨练打卡</b>
+            <div class="foot"><div class="avatar">陈</div><span>陈忠辛</span><span class="cnt">💬 2</span></div>
+          </div>
+        </div>
+        <div class="mcard">
+          <div class="photo p2 ph-sm">💪</div>
+          <div class="meta"><b>三个月的体态变化</b>
+            <div class="foot"><div class="avatar">林</div><span>林梦忍</span><span class="cnt">💬 12</span></div>
+          </div>
+        </div>
+        <div class="mcard">
+          <div class="photo p4 ph-md">🧘</div>
+          <div class="meta"><b>拉伸课后的放松时刻</b>
+            <div class="foot"><div class="avatar">徐</div><span>徐正週</span><span class="cnt">💬 3</span></div>
+          </div>
+        </div>
+        <div class="mcard">
+          <div class="photo p5 ph-sm">🏃</div>
+          <div class="meta"><b>今日有氧完成</b>
+            <div class="foot"><div class="avatar">王</div><span>王毅峰</span><span class="cnt">💬 1</span></div>
+          </div>
+        </div>
+        <div class="mcard">
+          <div class="photo p6 ph-md">🤸</div>
+          <div class="meta"><b>解锁新动作！</b>
+            <div class="foot"><div class="avatar">毛</div><span>毛文坊</span><span class="cnt">💬 8</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="fab">＋</div>
+  </div></div>
+  <div class="screen-label">风采广场<small>深色头部 + 今日额度胶囊 + 双列瀑布流，右下悬浮发布</small></div>
+</div>
+
+<!-- ========== 2 图片详情 + 评论 ========== -->
+<div class="screen-wrap">
+  <div class="phone"><div class="notch"></div><div class="scr">
+    <div class="nav-top"><div class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" stroke="#1C2430" fill="none" stroke-width="2.4"><path d="M15 18l-6-6 6-6"/></svg></div>图片详情<div class="icon-btn" style="font-size:14px;color:var(--sub)">···</div></div>
+    <div class="scroll" style="padding:0 0 70px">
+      <div class="photo p1 ph-lg detail-hero">🏋️‍♀️</div>
+      <div class="author">
+        <div class="avatar">毛</div>
+        <div><b>毛文坊</b><small>11-05 09:24 · 基础私教 · 陈筱鹭</small></div>
+        <span class="pill wait" style="margin-left:auto">已发布</span>
+      </div>
+      <div class="desc">第 12 次私教，深蹲终于稳了！感谢陈教练一直纠正我的膝盖方向 💪</div>
+
+      <div class="sec-title" style="margin:4px 16px 2px"><b>评论 6</b><a>按时间</a></div>
+      <div class="cmt-list">
+        <div class="cmt">
+          <div class="avatar">陈</div>
+          <div class="c">
+            <div class="n">陈筱鹭 <em>教练 · 09:31</em></div>
+            <p>进步很明显，膝盖不再内扣了，继续保持！</p>
+            <div class="ops"><span>回复</span><span>09:31</span></div>
+            <div class="replies">
+              <div class="reply"><b>毛文坊</b>：<i>谢谢教练，下周继续加重量 🙌</i></div>
+              <div class="reply"><b>陈筱鹭</b> 回复 <b>毛文坊</b>：<i>先稳动作，别急着上重量～</i></div>
+            </div>
+          </div>
+        </div>
+        <div class="cmt">
+          <div class="avatar">林</div>
+          <div class="c">
+            <div class="n">林梦忍 <em>会员 · 10:02</em></div>
+            <p>体态看着好了好多，羡慕！</p>
+            <div class="ops"><span>回复</span><span>10:02</span></div>
+          </div>
+        </div>
+        <div class="cmt">
+          <div class="avatar">王</div>
+          <div class="c">
+            <div class="n">王毅峰 <em>教练 · 10:15</em></div>
+            <p>核心收紧做得不错 👍</p>
+            <div class="ops"><span>回复</span><span>10:15</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cmt-bar">
+      <div class="inp">说点什么…</div>
+      <div class="send">➤</div>
+    </div>
+  </div></div>
+  <div class="screen-label">图片详情 · 评论与楼中楼<small>大图 + 作者信息 + 二级回复折叠区 + 底部常驻输入栏</small></div>
+</div>
+
+<!-- ========== 3 回复交互态 ========== -->
+<div class="screen-wrap">
+  <div class="phone"><div class="notch"></div><div class="scr">
+    <div class="nav-top"><div class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" stroke="#1C2430" fill="none" stroke-width="2.4"><path d="M15 18l-6-6 6-6"/></svg></div>评论 6<div class="icon-btn" style="font-size:14px;color:var(--sub)">···</div></div>
+    <div class="photo p1" style="height:110px;font-size:26px">🏋️‍♀️</div>
+    <div class="reply-tip"><span>正在回复 <b>@陈筱鹭</b></span><span style="cursor:pointer">取消</span></div>
+
+    <div class="scroll" style="padding:0 0 8px">
+      <div class="cmt-list" style="padding-top:2px">
+        <div class="cmt">
+          <div class="avatar">陈</div>
+          <div class="c">
+            <div class="n">陈筱鹭 <em>教练 · 09:31</em></div>
+            <p>进步很明显，膝盖不再内扣了，继续保持！</p>
+            <div class="ops"><span style="color:var(--primary-deep);font-weight:600">回复</span><span>09:31</span></div>
+            <div class="replies">
+              <div class="reply"><b>毛文坊</b>：<i>谢谢教练，下周继续加重量 🙌</i></div>
+              <div class="reply hl"><b>陈筱鹭</b> 回复 <b>毛文坊</b>：<i>先稳动作，别急着上重量～</i></div>
+              <div class="reply" style="color:var(--primary-deep);font-size:11px">共 3 条回复 ›</div>
+            </div>
+          </div>
+        </div>
+        <div class="cmt">
+          <div class="avatar">林</div>
+          <div class="c">
+            <div class="n">林梦忍 <em>会员 · 10:02</em></div>
+            <p>体态看着好了好多，羡慕！</p>
+            <div class="ops"><span>回复</span><span>10:02</span></div>
+            <div class="replies"><div class="reply"><b>毛文坊</b> 回复 <b>林梦忍</b>：<i>一起加油～</i></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="border-top:1px solid var(--line);background:#fff;padding:10px 16px 6px">
+      <div style="background:#F4F6F8;border-radius:14px;padding:10px 12px;font-size:12.5px;color:var(--ink)">
+        <span style="color:var(--blue);font-weight:600">@陈筱鹭</span> 好的，先把动作练稳！
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:8px"><span class="btn-ghost" style="height:32px">发送</span></div>
+    </div>
+    <div class="kbd">⌨ 输入面板</div>
+  </div></div>
+  <div class="screen-label">回复交互态<small>点「回复」后输入栏切换为 @对象；回复统一挂在同一楼中楼内</small></div>
+</div>
+
+<!-- ========== 4 发布图片 ========== -->
+<div class="screen-wrap">
+  <div class="phone"><div class="notch"></div><div class="scr">
+    <div class="nav-top"><div class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" stroke="#1C2430" fill="none" stroke-width="2.4"><path d="M15 18l-6-6 6-6"/></svg></div>发布风采<div class="icon-btn" style="font-size:11px;color:var(--sub)">2/4</div></div>
+    <div class="scroll" style="padding:0 0 20px">
+      <div class="photo p4 up-preview">📷</div>
+
+      <div class="compress">
+        <h4>压缩结果 <span class="pill wait" style="margin-left:6px">符合规范</span></h4>
+        <div class="cf-row"><span class="k">原始文件</span><span class="v">6.8 MB</span><span class="arrow">→</span><span class="v"><b>780 KB</b></span></div>
+        <div class="cf-row"><span class="k">尺寸</span><span class="v">4032 × 3024</span><span class="arrow">→</span><span class="v"><b>1920 × 1440</b></span></div>
+        <div class="cf-row"><span class="k">格式</span><span class="v">HEIC</span><span class="arrow">→</span><span class="v"><b>JPEG · Q82</b></span></div>
+        <div class="cf-row"><span class="k">单图上限</span><span class="v"><b>780 KB / 1024 KB</b> ✓</span></div>
+      </div>
+
+      <div class="rule-list">
+        <h4>发布规则</h4>
+        <div class="rl"><i>✓</i> 仅支持图片（JPG / PNG / WebP），本期不支持视频</div>
+        <div class="rl"><i>✓</i> 原图 &gt; 20 MB 直接拒绝，不再尝试压缩</div>
+        <div class="rl"><i>✓</i> 统一等比压缩至长边 1920 px，压缩后 ≤ 1 MB</div>
+        <div class="rl"><i>✓</i> 每位会员每天最多 4 张，成功后计数</div>
+        <div class="rl"><i>✓</i> 提交后需管理员审核通过才展示（可配置）</div>
+      </div>
+
+      <div class="quota-line"><b>今日额度</b><span>已用 2 / 4</span>
+        <div class="dots" style="margin-left:auto"><i class="on"></i><i class="on"></i><i></i><i></i></div>
+      </div>
+
+      <div class="ta">说点什么吧…（选填，最多 200 字）</div>
+
+      <div style="padding:18px 16px 0"><div class="btn">发布</div></div>
+    </div>
+  </div></div>
+  <div class="screen-label">发布图片<small>压缩前后对比 + 规则清单 + 今日额度，规则在提交前完全透明</small></div>
+</div>
+
+<!-- ========== 5 异常态 ========== -->
+<div class="screen-wrap">
+  <div class="phone"><div class="notch"></div><div class="scr">
+    <div class="nav-top"><div class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" stroke="#1C2430" fill="none" stroke-width="2.4"><path d="M15 18l-6-6 6-6"/></svg></div>发布风采<div class="icon-btn" style="font-size:11px;color:var(--sub)">4/4</div></div>
+    <div class="scroll" style="padding:0 0 20px">
+
+      <div class="reject">
+        <span style="color:var(--warn);font-weight:700;font-size:16px">⚠</span>
+        <div class="t"><b>图片过大，已拒绝</b>
+          <small>IMG_0231.HEIC · 26.4 MB，超过原始文件上限 20 MB。<br>请换一张照片，或先在系统相册中裁切后再上传。</small>
+        </div>
+      </div>
+
+      <div class="reject" style="margin-top:10px">
+        <span style="color:var(--warn);font-weight:700;font-size:16px">⚠</span>
+        <div class="t"><b>压缩后仍超过 1 MB</b>
+          <small>该图纹理过密，压缩至下限画质后为 1.21 MB，无法保证清晰度的同时满足上限，已拒绝。</small>
+        </div>
+      </div>
+
+      <div class="quota-full">
+        <div class="big">4 / 4</div>
+        <p>今日发布额度已用完<br><small style="font-size:11px">每日 0 点（Asia/Shanghai）自动重置</small></p>
+        <div class="dots" style="justify-content:center"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div>
+      </div>
+
+      <div class="rule-list" style="margin-top:12px">
+        <h4>被拒绝会占额度吗？</h4>
+        <div class="rl"><i>✗</i> 不会。文件校验失败（未落库）不计入每日 4 张。</div>
+        <div class="rl"><i>✓</i> 一旦上传成功，审核中 / 已发布 / 已驳回 / 已删除都占额度。</div>
+        <div class="rl"><i>✓</i> 驳回与删除当日不返还额度，避免「发了删、删了发」刷屏。</div>
+      </div>
+
+      <div style="padding:18px 16px 0"><div class="btn off">今日不可再发布</div></div>
+    </div>
+  </div></div>
+  <div class="screen-label">异常态 · 超限 / 额度用尽<small>原图过大、压缩后超限、额度耗尽三类反馈，并说明计数口径</small></div>
+</div>
+
+<!-- ========== 6 我的发布 ========== -->
+<div class="screen-wrap">
+  <div class="phone"><div class="notch"></div><div class="scr">
+    <div class="nav-top"><div class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" stroke="#1C2430" fill="none" stroke-width="2.4"><path d="M15 18l-6-6 6-6"/></svg></div>我的发布<div class="icon-btn" style="font-size:11px;color:var(--sub)">2/4</div></div>
+    <div class="scroll" style="padding:4px 16px 20px">
+      <div class="sec-title" style="margin-top:8px"><b>今天</b><a>2 / 4 张</a></div>
+
+      <div class="mine-row">
+        <div class="photo p1">🏋</div>
+        <div class="info"><b>第 12 次私教，深蹲终于稳了</b>
+          <small>11-05 09:24 · 780 KB</small>
+          <div class="ops"><span class="pill warn">审核中</span><span class="btn-ghost red" style="height:26px;padding:0 10px;font-size:11px">删除</span></div>
+        </div>
+      </div>
+      <div class="mine-row">
+        <div class="photo p6">🤸</div>
+        <div class="info"><b>解锁新动作！</b>
+          <small>11-05 08:10 · 642 KB</small>
+          <div class="ops"><span class="pill wait">已发布</span><span style="font-size:11px;color:var(--sub)">💬 8</span><span class="btn-ghost red" style="height:26px;padding:0 10px;font-size:11px">删除</span></div>
+        </div>
+      </div>
+
+      <div class="sec-title"><b>更早</b></div>
+      <div class="mine-row">
+        <div class="photo p2">💪</div>
+        <div class="info"><b>三个月的体态变化</b>
+          <small>11-02 19:40 · 890 KB</small>
+          <div class="ops"><span class="pill wait">已发布</span><span style="font-size:11px;color:var(--sub)">💬 12</span></div>
+        </div>
+      </div>
+      <div class="mine-row">
+        <div class="photo p3">📸</div>
+        <div class="info"><b>训练随手拍</b>
+          <small>11-01 10:02 · 512 KB</small>
+          <div class="ops"><span class="pill cancel">已驳回</span><span style="font-size:11px;color:var(--sub)">含无关内容</span></div>
+        </div>
+      </div>
+
+      <div class="banner" style="background:#EAF1FF;color:#3C6FD1;border-radius:14px;padding:11px 14px;font-size:11.5px;margin-top:12px;line-height:1.6">
+        ℹ️ 删除后图片与评论一并软删除；当日额度不返还。
+      </div>
+    </div>
+  </div></div>
+  <div class="screen-label">我的发布<small>审核状态胶囊（审核中 / 已发布 / 已驳回）+ 当日额度</small></div>
+</div>
+
+<!-- ========== 7 管理端审核（可选） ========== -->
+<div class="screen-wrap">
+  <div class="phone"><div class="notch"></div><div class="scr">
+    <div class="nav-top"><div class="icon-btn"><svg width="16" height="16" viewBox="0 0 24 24" stroke="#1C2430" fill="none" stroke-width="2.4"><path d="M15 18l-6-6 6-6"/></svg></div>风采审核<div class="icon-btn" style="font-size:11px;color:var(--sub)">3</div></div>
+    <div class="scroll" style="padding:4px 16px 20px">
+      <div class="sec-title" style="margin-top:8px"><b>待审核 3</b><a>全部记录</a></div>
+
+      <div class="review">
+        <div class="top"><div class="avatar">毛</div><b>毛文坊</b><span class="pill warn">待审核</span></div>
+        <div class="photo p1">🏋️‍♀️</div>
+        <div style="font-size:12px;margin-top:9px;line-height:1.6">第 12 次私教，深蹲终于稳了！</div>
+        <div style="font-size:10.5px;color:var(--sub);margin-top:5px">11-05 09:24 · 1920×1440 · 780 KB</div>
+        <div class="ops"><span class="btn-ghost red" style="justify-content:center">驳回</span><span class="btn-ghost" style="justify-content:center;background:var(--grad);color:#fff;border:none">通过</span></div>
+      </div>
+
+      <div class="review">
+        <div class="top"><div class="avatar">林</div><b>林梦忍</b><span class="pill warn">待审核</span></div>
+        <div class="photo p2">💪</div>
+        <div style="font-size:12px;margin-top:9px;line-height:1.6">三个月的体态变化</div>
+        <div style="font-size:10.5px;color:var(--sub);margin-top:5px">11-05 08:52 · 1920×1280 · 690 KB</div>
+        <div class="ops"><span class="btn-ghost red" style="justify-content:center">驳回</span><span class="btn-ghost" style="justify-content:center;background:var(--grad);color:#fff;border:none">通过</span></div>
+      </div>
+      <div style="text-align:center;color:var(--sub);font-size:11px;margin-top:14px">驳回需填写理由，会员端可见</div>
+    </div>
+  </div></div>
+  <div class="screen-label">管理端审核 · 可选<small>若保留「先审后发」则启用；关闭开关后发布即展示</small></div>
+</div>
+
+</div>
+</body>
+</html>
