@@ -10,3 +10,8 @@ spring:
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
+
+app:
+  package:
+    # 课包到期前 N 天提示「即将到期」，可按需调整
+    expiring-days: 7

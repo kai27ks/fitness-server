@@ -6,6 +6,7 @@ import com.jianshenfang.dto.AdminDtos;
 import com.jianshenfang.entity.*;
 import com.jianshenfang.mapper.*;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -30,13 +31,56 @@ public class AdminMemberService {
     private final OperationLogService logService;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
-    public List<Member> list(String keyword, Long coachId) {
+    /** 课包到期前 N 天判定为「即将到期」，可在 application.yml 配置 */
+    @Value("${app.package.expiring-days:7}")
+    private int expiringDays;
+
+    public List<AdminDtos.MemberAdminVO> list(String keyword, Long coachId) {
         LambdaQueryWrapper<Member> w = new LambdaQueryWrapper<Member>().orderByDesc(Member::getId);
         if (keyword != null && !keyword.isBlank()) {
             w.and(x -> x.like(Member::getName, keyword).or().like(Member::getPhone, keyword));
         }
         if (coachId != null) w.eq(Member::getCoachId, coachId);
-        return memberMapper.selectList(w);
+
+        LocalDate today = LocalDate.now();
+        return memberMapper.selectList(w).stream().map(m -> {
+            Coach coach = m.getCoachId() == null ? null : coachMapper.selectById(m.getCoachId());
+            List<MemberPackage> pkgs = packageMapper.selectList(new LambdaQueryWrapper<MemberPackage>()
+                    .eq(MemberPackage::getMemberId, m.getId())
+                    .orderByAsc(MemberPackage::getExpireDate));
+
+            List<AdminDtos.MemberCourseVO> courses = pkgs.stream().map(p -> {
+                CourseTemplate c = courseMapper.selectById(p.getCourseId());
+                return new AdminDtos.MemberCourseVO(p.getId(), p.getCourseId(),
+                        c == null ? "课程 #" + p.getCourseId() : c.getName(),
+                        p.getRemainSessions(), p.getTotalSessions(),
+                        p.getExpireDate() == null ? "" : p.getExpireDate().toString());
+            }).toList();
+
+            int remain = pkgs.stream().mapToInt(MemberPackage::getRemainSessions).sum();
+            int total = pkgs.stream().mapToInt(MemberPackage::getTotalSessions).sum();
+
+            String status;
+            if (pkgs.isEmpty()) {
+                status = "EMPTY";
+            } else if (pkgs.stream().allMatch(p -> p.getRemainSessions() <= 0)) {
+                status = "USED";
+            } else if (pkgs.stream().anyMatch(p -> p.getRemainSessions() > 0 && p.getExpireDate() != null
+                    && p.getExpireDate().isBefore(today))) {
+                status = "EXPIRED";
+            } else if (pkgs.stream().anyMatch(p -> p.getRemainSessions() > 0 && p.getExpireDate() != null
+                    && !p.getExpireDate().isBefore(today)
+                    && !p.getExpireDate().isAfter(today.plusDays(expiringDays)))) {
+                status = "EXPIRING";
+            } else {
+                status = "NORMAL";
+            }
+
+            return new AdminDtos.MemberAdminVO(m.getId(), m.getName(), m.getPhone(), m.getGender(),
+                    m.getBirthday() == null ? null : m.getBirthday().toString(),
+                    m.getCoachId(), coach == null ? null : coach.getName(),
+                    remain, total, courses, status);
+        }).toList();
     }
 
     public Member create(AdminDtos.MemberCreate req) {
@@ -74,6 +118,15 @@ public class AdminMemberService {
         Coach coach = member.getCoachId() == null ? null : coachMapper.selectById(member.getCoachId());
         List<MemberPackage> packages = packageMapper.selectList(new LambdaQueryWrapper<MemberPackage>()
                 .eq(MemberPackage::getMemberId, memberId).orderByDesc(MemberPackage::getRemainSessions));
+        List<AdminDtos.MemberPackageVO> packageVOs = packages.stream().map(p -> {
+            CourseTemplate c = courseMapper.selectById(p.getCourseId());
+            return new AdminDtos.MemberPackageVO(p.getId(), p.getCourseId(),
+                    c == null ? "课程 #" + p.getCourseId() : c.getName(),
+                    p.getRemainSessions(), p.getTotalSessions(),
+                    p.getTotalPrice() == null ? "0" : p.getTotalPrice().toPlainString(),
+                    p.getExpireDate() == null ? "" : p.getExpireDate().toString(),
+                    p.getStatus());
+        }).toList();
         List<Booking> bookings = bookingMapper.selectList(new LambdaQueryWrapper<Booking>()
                 .eq(Booking::getMemberId, memberId).orderByDesc(Booking::getStartTime).last("LIMIT 20"));
         List<Object> bookingVOs = bookings.stream().map(b -> {
@@ -88,7 +141,7 @@ public class AdminMemberService {
             map.put("status", b.getStatus());
             return (Object) map;
         }).toList();
-        return new MemberDetailVO(member, packages, bookingVOs, coach);
+        return new MemberDetailVO(member, packageVOs, bookingVOs, coach);
     }
 
     public record MemberDetailVO(Object member, List<?> packages, List<?> bookings, Object coach) {}
@@ -118,6 +171,29 @@ public class AdminMemberService {
         logService.log("REBIND_COACH", "MEMBER", memberId, remark);
     }
 
+    /** 全部会员课包（管理端课包页），支持按会员姓名/手机号搜索 */
+    public List<AdminDtos.PackageAdminVO> allPackages(String keyword) {
+        LambdaQueryWrapper<MemberPackage> w = new LambdaQueryWrapper<MemberPackage>()
+                .orderByAsc(MemberPackage::getExpireDate);
+        if (keyword != null && !keyword.isBlank()) {
+            List<Member> members = memberMapper.selectList(new LambdaQueryWrapper<Member>()
+                    .and(x -> x.like(Member::getName, keyword).or().like(Member::getPhone, keyword)));
+            if (members.isEmpty()) return List.of();
+            w.in(MemberPackage::getMemberId, members.stream().map(Member::getId).toList());
+        }
+        return packageMapper.selectList(w).stream().map(p -> {
+            Member m = memberMapper.selectById(p.getMemberId());
+            CourseTemplate c = courseMapper.selectById(p.getCourseId());
+            return new AdminDtos.PackageAdminVO(p.getId(), p.getMemberId(),
+                    m == null ? "会员" : m.getName(),
+                    c == null ? "课程" : c.getName(),
+                    p.getRemainSessions(), p.getTotalSessions(),
+                    p.getTotalPrice() == null ? "0" : p.getTotalPrice().toPlainString(),
+                    p.getExpireDate() == null ? "" : p.getExpireDate().toString(),
+                    p.getStatus());
+        }).toList();
+    }
+
     public MemberPackage addPackage(Long memberId, AdminDtos.PackageAdd req) {
         Member m = memberMapper.selectById(memberId);
         if (m == null) throw new BusinessException("会员不存在");
@@ -125,24 +201,51 @@ public class AdminMemberService {
         if (course == null) throw new BusinessException("课程不存在");
         LocalDate start = req.startDate() == null ? LocalDate.now() : LocalDate.parse(req.startDate());
         LocalDate expire = req.expireDate() == null ? start.plusMonths(6) : LocalDate.parse(req.expireDate());
+        BigDecimal price = req.totalPrice() == null ? BigDecimal.ZERO : req.totalPrice();
+        int sessions = req.totalSessions() == null ? 0 : req.totalSessions();
+        if (sessions <= 0) {
+            throw new BusinessException("增购节数须大于 0");
+        }
+
+        // 同会员同课程只能有一条课包（uk_member_course）：已存在则并入，避免唯一键冲突
+        MemberPackage exist = packageMapper.selectOne(new LambdaQueryWrapper<MemberPackage>()
+                .eq(MemberPackage::getMemberId, memberId)
+                .eq(MemberPackage::getCourseId, req.courseId()));
+        if (exist != null) {
+            exist.setTotalSessions(exist.getTotalSessions() + sessions);
+            exist.setRemainSessions(exist.getRemainSessions() + sessions);
+            exist.setTotalPrice((exist.getTotalPrice() == null ? BigDecimal.ZERO : exist.getTotalPrice()).add(price));
+            if (expire.isAfter(exist.getExpireDate())) {
+                exist.setExpireDate(expire);
+            }
+            exist.setStatus("ACTIVE");
+            packageMapper.updateById(exist);
+            logService.log("ADD_PACKAGE", "MEMBER_PACKAGE", exist.getId(), "增购并入 " + sessions + " 节");
+            return exist;
+        }
+
         MemberPackage p = new MemberPackage();
         p.setMemberId(memberId);
         p.setCourseId(req.courseId());
-        p.setTotalSessions(req.totalSessions());
-        p.setRemainSessions(req.totalSessions());
-        p.setTotalPrice(req.totalPrice() == null ? BigDecimal.ZERO : req.totalPrice());
+        p.setTotalSessions(sessions);
+        p.setRemainSessions(sessions);
+        p.setTotalPrice(price);
         p.setStartDate(start);
         p.setExpireDate(expire);
         p.setStatus("ACTIVE");
-        packageMapper.insert(p);
-        logService.log("ADD_PACKAGE", "MEMBER_PACKAGE", p.getId(), "增购 " + req.totalSessions() + " 节");
+        try {
+            packageMapper.insert(p);
+        } catch (org.springframework.dao.DuplicateKeyException e) {
+            throw new BusinessException("该课程课包已存在，请刷新后重试");
+        }
+        logService.log("ADD_PACKAGE", "MEMBER_PACKAGE", p.getId(), "新增课包 " + sessions + " 节");
         return p;
     }
 
     public void adjustSessions(Long packageId, AdminDtos.AdjustSessions req) {
         MemberPackage p = packageMapper.selectById(packageId);
         if (p == null) throw new BusinessException("课包不存在");
-        int newRemain = p.getRemainSessions() + req.delta();
+        int newRemain = (int) (p.getRemainSessions() + req.delta());
         if (newRemain < 0) throw new BusinessException("剩余课时不足扣减");
         p.setRemainSessions(newRemain);
         packageMapper.updateById(p);

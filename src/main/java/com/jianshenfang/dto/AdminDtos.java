@@ -31,6 +31,25 @@ public final class AdminDtos {
 
     public record AdjustSessions(Long delta, String remark) {}
 
+    /** 管理端课包列表项 */
+    public record PackageAdminVO(Long id, Long memberId, String memberName, String courseName,
+                                 int remainSessions, int totalSessions, String totalPrice,
+                                 String expireDate, String status) {}
+
+    /** 会员详情内的课包项（带课程名称） */
+    public record MemberPackageVO(Long id, Long courseId, String courseName,
+                                  int remainSessions, int totalSessions, String totalPrice,
+                                  String expireDate, String status) {}
+
+    /** 会员列表项：带专属教练名、课程（多课程多条）、剩余课时与临期状态 */
+    public record MemberAdminVO(Long id, String name, String phone, Integer gender, String birthday,
+                                Long coachId, String coachName,
+                                int remainSessions, int totalSessions,
+                                List<MemberCourseVO> courses, String status) {}
+
+    public record MemberCourseVO(Long packageId, Long courseId, String courseName,
+                                 int remainSessions, int totalSessions, String expireDate) {}
+
     public record MemberDetail(
             Object member, List<Object> packages, List<Object> bookings, Object coach) {}
 
