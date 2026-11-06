@@ -75,6 +75,8 @@ public class WechatBindService {
         wa.setUnionid(id.unionid());
         wa.setAvatarUrl(id.avatarUrl());
         wa.setNickname(id.nickname());
+        // 新绑定默认未关注；后续由 cgi-bin/user/info 或关注事件推送更新
+        wa.setSubscribed(0);
         LocalDateTime now = LocalDateTime.now();
         wa.setCreateTime(now);
         wa.setUpdateTime(now);

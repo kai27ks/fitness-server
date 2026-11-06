@@ -52,6 +52,7 @@ public class WechatAuthService {
     private final SysUserMapper userMapper;
     private final AuthService authService;
     private final WechatBindService bindService;
+    private final WxApiClient wxApiClient;
     private final OperationLogService logService;
     private final RestTemplate restTemplate = new RestTemplate();
 
@@ -102,8 +103,25 @@ public class WechatAuthService {
         payload.put("nickname", id.nickname());
         payload.put("redirect", safeRedirect(redirect));
         if (bound != null) payload.put("userId", bound.getUserId());
+        payload.put("subscribed", refreshSubscribe(id.openid(), bound));
         String ticket = issue(CLAIM_TICKET, payload.toString(), wx.getTicketTtlSeconds());
         return wx.getH5BaseUrl() + "/wechat/entry?ticket=" + enc(ticket);
+    }
+
+    /** 刷新关注状态：真实模式调 cgi-bin/user/info；关注/取关事件推送会实时更新此字段 */
+    private boolean refreshSubscribe(String openid, WechatAccount bound) {
+        if (wx.isMock()) return !wx.isMockFollowRequired();
+        Boolean subscribed = wxApiClient.subscribed(openid);
+        if (subscribed != null && bound != null) {
+            WechatAccount upd = new WechatAccount();
+            upd.setId(bound.getId());
+            upd.setSubscribed(subscribed ? 1 : 0);
+            if (subscribed) upd.setSubscribedAt(LocalDateTime.now());
+            else upd.setUnsubscribedAt(LocalDateTime.now());
+            wechatAccountMapper.updateById(upd);
+        }
+        if (subscribed != null) return subscribed;
+        return bound != null && bound.getSubscribed() != null && bound.getSubscribed() == 1;
     }
 
     public String errorUrl(String message) {
@@ -123,17 +141,23 @@ public class WechatAuthService {
             }
             AuthDtos.LoginResponse login = authService.loginSuccess(user);
             return new WechatDtos.TicketResponse(login.token(), login.role(), login.name(),
-                    login.memberId(), false, null, redirect, null, null);
+                    login.memberId(), false, null, redirect, null, null,
+                    needFollow(p), wx.getQrcodeUrl());
         }
         // 未绑定：换发一个有效期更长的认领票据，供绑定页提交
         String claimTicket = issue(CLAIM_TICKET, p.toString(), wx.getClaimTicketTtlSeconds());
         return new WechatDtos.TicketResponse(null, null, null, null,
-                true, claimTicket, redirect, text(p, "avatarUrl"), text(p, "nickname"));
+                true, claimTicket, redirect, text(p, "avatarUrl"), text(p, "nickname"),
+                needFollow(p), wx.getQrcodeUrl());
+    }
+
+    private boolean needFollow(JsonNode p) {
+        return wx.isNotifyEnabled() && !p.path("subscribed").asBoolean(true);
     }
 
     // ==================== 认领 ====================
 
-    public AuthDtos.LoginResponse claim(WechatDtos.ClaimRequest req) {
+    public WechatDtos.ClaimResponse claim(WechatDtos.ClaimRequest req) {
         JsonNode p = consume(CLAIM_TICKET, req.claimTicket());
         WechatDtos.Identity id = new WechatDtos.Identity(
                 text(p, "appid"), text(p, "openid"), text(p, "unionid"),
@@ -178,7 +202,12 @@ public class WechatAuthService {
         if (user == null || user.getStatus() == null || user.getStatus() != 1) {
             throw new BusinessException("账号不可用，请联系前台");
         }
-        return authService.loginSuccess(user);
+        WechatAccount bound = wechatAccountMapper.selectOne(new LambdaQueryWrapper<WechatAccount>()
+                .eq(WechatAccount::getOpenid, id.openid()));
+        boolean subscribed = refreshSubscribe(id.openid(), bound);
+        AuthDtos.LoginResponse login = authService.loginSuccess(user);
+        return new WechatDtos.ClaimResponse(login.token(), login.role(), login.name(),
+                login.memberId(), wx.isNotifyEnabled() && !subscribed, wx.getQrcodeUrl());
     }
 
     private void createClaimRequest(WechatDtos.Identity id, String phone) {

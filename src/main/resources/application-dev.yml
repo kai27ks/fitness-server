@@ -33,3 +33,8 @@ wx:
   mock: true
   callback-base-url: http://localhost:8080
   h5-base-url: http://localhost:5173
+  # 改成 true 可强制显示「引导关注」页，便于本地联调 Q10
+  mock-follow-required: false
+  # dev 未配置模板 ID 时通知整体跳过；填任意非空模板 ID 即可在管理端看到 SKIPPED 记录
+  # 要真实发送需 mock=false + 真实公众号 + 真实模板 ID
+  notify-enabled: true

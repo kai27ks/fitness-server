@@ -1,7 +1,6 @@
 package com.jianshenfang.controller;
 
 import com.jianshenfang.common.Result;
-import com.jianshenfang.dto.AuthDtos;
 import com.jianshenfang.dto.WechatDtos;
 import com.jianshenfang.service.WechatAuthService;
 import jakarta.validation.Valid;
@@ -28,7 +27,7 @@ public class WechatAuthController {
     }
 
     @PostMapping("/claim")
-    public Result<AuthDtos.LoginResponse> claim(@Valid @RequestBody WechatDtos.ClaimRequest req) {
+    public Result<WechatDtos.ClaimResponse> claim(@Valid @RequestBody WechatDtos.ClaimRequest req) {
         return Result.ok(wechatAuthService.claim(req));
     }
 }

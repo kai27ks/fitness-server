@@ -77,3 +77,18 @@ wx:
   claim-code-max-fail: 5
   avatar-upload-dir: ./upload/avatars
   avatar-url-prefix: /upload/avatars
+
+  # ===== 预约通知（Q9~Q11）=====
+  # 公众号后台「服务器配置」的 Token，用于事件推送验签
+  token: ${WX_TOKEN:}
+  # 引导关注页展示的公众号二维码图片地址（可为空，为空只显示文字引导）
+  qrcode-url: ${WX_QRCODE_URL:}
+  notify-enabled: true
+  # 模板 ID 从公众号后台「模板库」选用后填入；为空则该场景自动跳过，不发请求
+  templates:
+    BOOKING_CREATED: ${WX_TPL_BOOKING_CREATED:}
+    BOOKING_CANCELED: ${WX_TPL_BOOKING_CANCELED:}
+    BOOKING_REMINDER: ${WX_TPL_BOOKING_REMINDER:}
+  reminder-hours: 24              # Q11：提前 24 小时
+  reminder-window-minutes: 60     # 扫描窗口，dedup_key 保证只发一次
+  mock-follow-required: false     # 生产保持 false

@@ -194,6 +194,9 @@ CREATE TABLE IF NOT EXISTS wechat_account (
     unionid     VARCHAR(64)  NULL,
     avatar_url  VARCHAR(255) NULL COMMENT '转存到本站 /upload/avatars 后的相对路径',
     nickname    VARCHAR(64)  NULL,
+    subscribed  TINYINT      NOT NULL DEFAULT 0 COMMENT '是否关注服务号（模板消息前提）',
+    subscribed_at   DATETIME NULL,
+    unsubscribed_at DATETIME NULL,
     create_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     update_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY uk_user (user_id),
@@ -239,3 +242,30 @@ CREATE TABLE IF NOT EXISTS wechat_claim_request (
     KEY idx_status_time (status, create_time),
     KEY idx_openid (openid)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT '手机号未命中的待核实认领申请';
+
+-- ===== 公众号模板消息发送记录（Q9~Q11） =====
+CREATE TABLE IF NOT EXISTS wechat_notify_log (
+    id           BIGINT AUTO_INCREMENT PRIMARY KEY,
+    dedup_key    VARCHAR(120) NOT NULL COMMENT 'scene:bizId:openid，保证同一事件只发一次',
+    scene        VARCHAR(30)  NOT NULL COMMENT 'BOOKING_CREATED/BOOKING_CANCELED/BOOKING_REMINDER',
+    openid       VARCHAR(64)  NULL,
+    member_id    BIGINT       NULL,
+    biz_id       BIGINT       NULL COMMENT '预约 id',
+    template_id  VARCHAR(64)  NULL,
+    msgid        VARCHAR(64)  NULL,
+    errcode      INT          NULL,
+    errmsg       VARCHAR(200) NULL,
+    status       VARCHAR(16)  NOT NULL DEFAULT 'PENDING' COMMENT 'SUCCESS/FAILED/SKIPPED',
+    retry_count  INT          NOT NULL DEFAULT 0,
+    content      VARCHAR(500) NULL,
+    create_time  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_dedup (dedup_key),
+    KEY idx_scene_time (scene, create_time)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT '公众号模板消息发送与幂等记录';
+
+-- 注意：项目无 Flyway/Liquibase，CREATE TABLE IF NOT EXISTS 不会给已存在的表加列。
+-- 若 dev 库在加 subscribed 字段之前已初始化过 wechat_account，需手工执行一次：
+-- ALTER TABLE wechat_account
+--   ADD COLUMN subscribed TINYINT NOT NULL DEFAULT 0 COMMENT '是否关注服务号',
+--   ADD COLUMN subscribed_at DATETIME NULL,
+--   ADD COLUMN unsubscribed_at DATETIME NULL;
