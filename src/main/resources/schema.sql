@@ -122,3 +122,62 @@ CREATE TABLE IF NOT EXISTS operation_log (
     create_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     KEY idx_op_time (create_time)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT '敏感操作日志';
+
+-- ===== 会员风采（本期仅图片） =====
+CREATE TABLE IF NOT EXISTS media (
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    member_id       BIGINT       NOT NULL COMMENT '发布会员 member.id',
+    author_name     VARCHAR(30)  NOT NULL COMMENT '冗余展示名',
+    title           VARCHAR(200) NULL COMMENT '配文，≤200 字',
+    type            VARCHAR(10)  NOT NULL DEFAULT 'IMAGE' COMMENT '本期固定 IMAGE',
+    url             VARCHAR(255) NOT NULL COMMENT '大图相对路径',
+    thumb_url       VARCHAR(255) NOT NULL COMMENT '缩略图相对路径',
+    width           INT          NOT NULL,
+    height          INT          NOT NULL,
+    source_size     BIGINT       NOT NULL COMMENT '原图字节',
+    output_size     BIGINT       NOT NULL COMMENT '压缩后字节',
+    source_format   VARCHAR(10)  NULL COMMENT 'JPEG/PNG/WEBP',
+    batch_id        VARCHAR(36)  NULL COMMENT '前端一次选图批次，便于逐张定位打回',
+    upload_day      DATE         NOT NULL COMMENT 'Asia/Shanghai 自然日',
+    status          VARCHAR(20)  NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING/APPROVED/REJECTED/DELETED',
+    reject_reason   VARCHAR(200) NULL,
+    review_by       BIGINT       NULL,
+    review_at       DATETIME     NULL,
+    audit_status    VARCHAR(20)  NOT NULL DEFAULT 'SKIPPED' COMMENT 'SKIPPED/PASS/REVIEW/BLOCK/ERROR',
+    audit_suggestion VARCHAR(20) NULL COMMENT '腾讯云 Suggestion: Pass/Review/Block',
+    audit_label     VARCHAR(50)  NULL,
+    audit_score     INT          NULL,
+    audit_request_id VARCHAR(64) NULL,
+    audit_at        DATETIME     NULL,
+    comment_count   INT          NOT NULL DEFAULT 0,
+    duration        INT          NULL COMMENT '本期不用，保留 NULL',
+    create_time     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_status_day (status, upload_day, id),
+    KEY idx_member_day (member_id, upload_day)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT '会员风采图片';
+
+CREATE TABLE IF NOT EXISTS media_comment (
+    id               BIGINT AUTO_INCREMENT PRIMARY KEY,
+    media_id         BIGINT       NOT NULL,
+    user_id          BIGINT       NOT NULL COMMENT 'sys_user.id',
+    author_role      VARCHAR(20)  NOT NULL,
+    author_name      VARCHAR(30)  NOT NULL COMMENT '冗余展示名',
+    root_id          BIGINT       NULL COMMENT '一级评论 id；一级评论为 NULL',
+    parent_id        BIGINT       NULL COMMENT '被回复的评论 id',
+    reply_to_user_id BIGINT       NULL,
+    reply_to_name    VARCHAR(30)  NULL,
+    content          VARCHAR(200) NOT NULL,
+    status           VARCHAR(20)  NOT NULL DEFAULT 'NORMAL' COMMENT 'NORMAL/DELETED',
+    create_time      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_media_root (media_id, root_id, id),
+    KEY idx_user_time (user_id, create_time)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT '风采评论/回复';
+
+CREATE TABLE IF NOT EXISTS moment_daily_quota (
+    member_id   BIGINT   NOT NULL,
+    upload_day  DATE     NOT NULL,
+    used_count  TINYINT  NOT NULL DEFAULT 0,
+    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (member_id, upload_day)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT '风采每日额度计数';

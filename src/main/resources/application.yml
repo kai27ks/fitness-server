@@ -6,6 +6,10 @@ spring:
   jackson:
     time-zone: Asia/Shanghai
     date-format: yyyy-MM-dd HH:mm:ss
+  servlet:
+    multipart:
+      max-file-size: 25MB        # 原图上限 20MB，留余量
+      max-request-size: 25MB
 
 mybatis-plus:
   configuration:
@@ -15,3 +19,42 @@ app:
   package:
     # 课包到期前 N 天提示「即将到期」，可按需调整
     expiring-days: 7
+  moments:
+    enabled: true                     # 风采功能总开关（与下面两个审核开关无关）
+    # ===== 两个审核开关：彼此独立，改完重启生效 =====
+    machine-audit-enabled: false      # 开关① 机器审核：true=逐张调用腾讯云 IMS；false=完全跳过、不发 HTTP
+    need-review: true                 # 开关② 人工审核：true=进待审队列；false=不进队列
+    # 四种组合：
+    #   机审开 + 人审开：机审通过后待管理员审核，通过才展示
+    #   机审开 + 人审关：机审通过即展示；判定违规的那张仍单独打回
+    #   机审关 + 人审开：直接进入待审核队列
+    #   机审关 + 人审关：上传成功立即在风采广场展示，无需任何审核
+    upload-dir: ./upload/moments     # 生产在 application-prod.yml 覆盖为 /opt/fitness/upload/moments
+    url-prefix: /upload/moments
+    max-source-bytes: 20971520       # 原图 > 20 MB 直接拒绝
+    max-source-pixels: 40000000      # 4000 万像素，防图片炸弹
+    max-edge: 1920
+    min-edge: 1280
+    thumb-edge: 640
+    thumb-max-bytes: 153600          # 缩略图 ≤ 150 KB
+    jpeg-quality: 0.82
+    min-jpeg-quality: 0.70
+    max-output-bytes: 1048576        # 压缩后 ≤ 1 MB
+    daily-limit: 4
+    title-max-length: 200
+    comment-max-length: 200
+    comment-max-per-minute: 10       # 0 表示不限制
+    # ===== 腾讯云图片内容安全（天御 IMS）连接参数（开关在上方，不在这里） =====
+    # 机审开启但未填密钥时会降级跳过并输出告警，后续按「人审开关」决定入队或立即展示
+    audit:
+      enabled: false                  # 兼容旧开关：与 machine-audit-enabled 任一为 true 即开启机审
+      endpoint: ims.tencentcloudapi.com
+      region: ap-guangzhou
+      version: '2020-12-29'
+      action: ImageModeration
+      secret-id: ''                  # TODO 腾讯云 API 密钥 SecretId（勿入库，用环境变量覆盖）
+      secret-key: ''                 # TODO 腾讯云 API 密钥 SecretKey
+      biz-type: ''                   # 可选：天御控制台创建的业务策略 BizType
+      timeout-ms: 5000
+      fail-open: true                # 机审异常时放行，转人工审核；false 则拒绝上传
+      review-as-reject: false        # 腾讯云返回 Review 时：false=转人工复核，true=直接打回
