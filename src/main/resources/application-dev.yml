@@ -18,8 +18,7 @@ mybatis-plus:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 
 app:
-  # 开发环境直接把验证码返回给前端（模拟短信），生产必须关闭并接真实通道
-  sms-mock: true
+  # 短信验证码链路已下线（Q2=A），不再有 sms-mock 开关
   jwt-secret: dev-jwt-secret-please-change-to-32-bytes-min!!
   jwt-expire-days: 7
   studio:
@@ -28,3 +27,9 @@ app:
     hours: 09:00 - 21:00
     open-hour: 9
     close-hour: 21
+
+# 本地无公众号资质时走 mock：/wechat/oauth/entry?mockOpenid=test01 即可模拟不同微信用户
+wx:
+  mock: true
+  callback-base-url: http://localhost:8080
+  h5-base-url: http://localhost:5173

@@ -23,6 +23,7 @@ public class MemberService {
     private final CourseTemplateMapper courseMapper;
     private final MemberPackageMapper packageMapper;
     private final BookingMapper bookingMapper;
+    private final WechatAccountMapper wechatAccountMapper;
 
     @Value("${app.studio.name}") private String studioName;
     @Value("${app.studio.address}") private String studioAddress;
@@ -115,7 +116,10 @@ public class MemberService {
 
         String phone = member.getPhone();
         String masked = phone.length() == 11 ? phone.substring(0, 3) + "****" + phone.substring(7) : phone;
+        WechatAccount wa = wechatAccountMapper.selectOne(new LambdaQueryWrapper<WechatAccount>()
+                .eq(WechatAccount::getUserId, userId));
+        String avatarUrl = wa == null ? null : wa.getAvatarUrl();
         return new MemberDtos.MeResponse(member.getName(), masked, coach == null ? null : coach.getName(),
-                remain, consumed, upcoming, packageCount);
+                avatarUrl, remain, consumed, upcoming, packageCount);
     }
 }

@@ -58,3 +58,22 @@ app:
       timeout-ms: 5000
       fail-open: true                # 机审异常时放行，转人工审核；false 则拒绝上传
       review-as-reject: false        # 腾讯云返回 Review 时：false=转人工复核，true=直接打回
+
+# ===== 微信公众号网页授权 =====
+# 生产用环境变量 WX_APPID / WX_SECRET 覆盖；勿把密钥写进仓库
+wx:
+  appid: ${WX_APPID:}
+  secret: ${WX_SECRET:}
+  scope: snsapi_userinfo
+  # 微信回调可达的后端域名，必须与公众号后台「网页授权域名」一致
+  callback-base-url: ${WX_CALLBACK_BASE_URL:http://localhost:8080}
+  # 授权完成后 302 回会员端 H5
+  h5-base-url: ${WX_H5_BASE_URL:http://localhost:5173}
+  mock: false                       # 生产必须为 false
+  state-ttl-seconds: 300
+  ticket-ttl-seconds: 120
+  claim-ticket-ttl-seconds: 600
+  claim-code-expire-days: 7
+  claim-code-max-fail: 5
+  avatar-upload-dir: ./upload/avatars
+  avatar-url-prefix: /upload/avatars

@@ -3,12 +3,14 @@ package com.jianshenfang.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.jianshenfang.common.BusinessException;
 import com.jianshenfang.dto.AdminDtos;
+import com.jianshenfang.dto.WechatDtos;
 import com.jianshenfang.entity.*;
 import com.jianshenfang.mapper.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -29,6 +31,7 @@ public class AdminMemberService {
     private final MemberPackageMapper packageMapper;
     private final BookingMapper bookingMapper;
     private final OperationLogService logService;
+    private final WechatAdminService wechatAdminService;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
     /** 课包到期前 N 天判定为「即将到期」，可在 application.yml 配置 */
@@ -83,9 +86,19 @@ public class AdminMemberService {
         }).toList();
     }
 
-    public Member create(AdminDtos.MemberCreate req) {
-        if (memberMapper.selectCount(new LambdaQueryWrapper<Member>().eq(Member::getPhone, req.phone())) > 0) {
+    /** 建档：同时创建登录账号与会员档案，并生成线下认领码交给会员 */
+    @Transactional
+    public AdminDtos.MemberCreateVO create(AdminDtos.MemberCreate req) {
+        String phone = req.phone().trim();
+        if (!phone.matches("^1\\d{10}$")) {
+            throw new BusinessException("请输入正确的手机号");
+        }
+        // 两张表都有 uk_phone，必须都查，否则会撞唯一键变成 500
+        if (memberMapper.selectCount(new LambdaQueryWrapper<Member>().eq(Member::getPhone, phone)) > 0) {
             throw new BusinessException("该手机号会员已存在");
+        }
+        if (userMapper.selectCount(new LambdaQueryWrapper<SysUser>().eq(SysUser::getPhone, phone)) > 0) {
+            throw new BusinessException("该手机号账号已存在");
         }
         if (req.coachId() != null) {
             Coach coach = coachMapper.selectById(req.coachId());
@@ -94,7 +107,7 @@ public class AdminMemberService {
             }
         }
         SysUser user = new SysUser();
-        user.setPhone(req.phone());
+        user.setPhone(phone);
         user.setPassword(encoder.encode(req.password() == null ? "123456" : req.password()));
         user.setRole("MEMBER");
         user.setStatus(1);
@@ -103,13 +116,16 @@ public class AdminMemberService {
         Member m = new Member();
         m.setUserId(user.getId());
         m.setName(req.name());
-        m.setPhone(req.phone());
+        m.setPhone(phone);
         m.setGender(req.gender());
         m.setBirthday(req.birthday() == null ? null : LocalDate.parse(req.birthday()));
         m.setCoachId(req.coachId());
         memberMapper.insert(m);
-        logService.log("CREATE_MEMBER", "MEMBER", m.getId(), "管理员代录会员 " + req.phone());
-        return m;
+        logService.log("CREATE_MEMBER", "MEMBER", m.getId(), "代录会员 " + phone);
+
+        WechatDtos.ClaimCodeVO code = wechatAdminService.resetClaimCode(m.getId());
+        return new AdminDtos.MemberCreateVO(m.getId(), m.getName(), m.getPhone(),
+                code.code(), code.expireAt() == null ? null : code.expireAt().toString());
     }
 
     public MemberDetailVO detail(Long memberId) {
@@ -146,6 +162,8 @@ public class AdminMemberService {
 
     public record MemberDetailVO(Object member, List<?> packages, List<?> bookings, Object coach) {}
 
+    /** 编辑资料：手机号在 sys_user 与 member 各存一份，必须在同一事务里同步 */
+    @Transactional
     public void updateMember(Long id, AdminDtos.MemberUpdate req) {
         Member m = memberMapper.selectById(id);
         if (m == null) throw new BusinessException("会员不存在");
@@ -156,6 +174,27 @@ public class AdminMemberService {
             Coach coach = coachMapper.selectById(req.coachId());
             if (coach == null || coach.getStatus() != 1) throw new BusinessException("教练不存在或已停用");
             m.setCoachId(req.coachId());
+        }
+        if (req.phone() != null && !req.phone().isBlank()) {
+            String newPhone = req.phone().trim();
+            if (!newPhone.matches("^1\\d{10}$")) throw new BusinessException("请输入正确的手机号");
+            if (!newPhone.equals(m.getPhone())) {
+                if (memberMapper.selectCount(new LambdaQueryWrapper<Member>().eq(Member::getPhone, newPhone)) > 0) {
+                    throw new BusinessException("该手机号已被其他会员使用");
+                }
+                if (userMapper.selectCount(new LambdaQueryWrapper<SysUser>().eq(SysUser::getPhone, newPhone)) > 0) {
+                    throw new BusinessException("该手机号已被其他账号使用");
+                }
+                SysUser user = userMapper.selectById(m.getUserId());
+                if (user == null) throw new BusinessException("登录账号不存在");
+                SysUser upd = new SysUser();
+                upd.setId(user.getId());
+                upd.setPhone(newPhone);
+                userMapper.updateById(upd);
+                logService.log("UPDATE_MEMBER_PHONE", "MEMBER", id,
+                        "手机号 " + m.getPhone() + " -> " + newPhone);
+                m.setPhone(newPhone);
+            }
         }
         memberMapper.updateById(m);
         logService.log("UPDATE_MEMBER", "MEMBER", id, "更新会员资料");

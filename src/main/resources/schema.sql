@@ -181,3 +181,61 @@ CREATE TABLE IF NOT EXISTS moment_daily_quota (
     update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (member_id, upload_day)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT '风采每日额度计数';
+
+-- ===== 微信公众号入口：身份绑定 / 认领码 / 临时票据 / 待核实申请 =====
+-- 说明：全部为新增独立表，不改 sys_user / member 的既有列与唯一约束，
+--       CREATE TABLE IF NOT EXISTS 对已有库可安全重复执行。
+
+CREATE TABLE IF NOT EXISTS wechat_account (
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id     BIGINT       NOT NULL COMMENT 'sys_user.id（教练建档时已存在）',
+    appid       VARCHAR(64)  NOT NULL,
+    openid      VARCHAR(64)  NOT NULL,
+    unionid     VARCHAR(64)  NULL,
+    avatar_url  VARCHAR(255) NULL COMMENT '转存到本站 /upload/avatars 后的相对路径',
+    nickname    VARCHAR(64)  NULL,
+    create_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_user (user_id),
+    UNIQUE KEY uk_appid_openid (appid, openid),
+    KEY idx_unionid (unionid)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT '微信身份绑定';
+
+CREATE TABLE IF NOT EXISTS member_claim_code (
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    member_id   BIGINT      NOT NULL COMMENT 'member.id',
+    code        VARCHAR(16) NOT NULL COMMENT '6 位认领码，线下交付',
+    expire_at   DATETIME    NOT NULL,
+    fail_count  INT         NOT NULL DEFAULT 0,
+    used_at     DATETIME    NULL,
+    create_time DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_member (member_id),
+    KEY idx_code (code)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT '会员认领码（不接短信时的线下凭证）';
+
+CREATE TABLE IF NOT EXISTS wechat_temp_token (
+    token       VARCHAR(64) NOT NULL PRIMARY KEY,
+    type        VARCHAR(16) NOT NULL COMMENT 'STATE / CLAIM_TICKET',
+    payload     VARCHAR(1000) NULL COMMENT 'JSON：redirect 或 openid/unionid/avatar/nickname/userId',
+    expire_at   DATETIME    NOT NULL,
+    used_at     DATETIME    NULL,
+    create_time DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_type_expire (type, expire_at)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT '微信授权 state 与一次性认领票据';
+
+CREATE TABLE IF NOT EXISTS wechat_claim_request (
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    appid       VARCHAR(64)  NULL,
+    openid      VARCHAR(64)  NOT NULL,
+    unionid     VARCHAR(64)  NULL,
+    avatar_url  VARCHAR(255) NULL,
+    nickname    VARCHAR(64)  NULL,
+    phone_input VARCHAR(20)  NOT NULL COMMENT '会员填入但档案中不存在的手机号',
+    status      VARCHAR(20)  NOT NULL DEFAULT 'PENDING' COMMENT 'PENDING/HANDLED/REJECTED',
+    handle_note VARCHAR(200) NULL,
+    handled_by  BIGINT       NULL COMMENT 'sys_user.id',
+    handled_at  DATETIME     NULL,
+    create_time DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_status_time (status, create_time),
+    KEY idx_openid (openid)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT '手机号未命中的待核实认领申请';

@@ -17,6 +17,7 @@ public class WebConfig implements WebMvcConfigurer {
 
     private final AuthInterceptor authInterceptor;
     private final MomentProperties momentProperties;
+    private final WxProperties wxProperties;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
@@ -46,5 +47,13 @@ public class WebConfig implements WebMvcConfigurer {
         String prefix = momentProperties.getUrlPrefix();
         if (!prefix.startsWith("/")) prefix = "/" + prefix;
         registry.addResourceHandler(prefix + "/**").addResourceLocations(location);
+
+        // 微信头像转存目录：同样不在 /api/** 下，不受登录拦截器保护
+        Path avatarDir = Paths.get(wxProperties.getAvatarUploadDir()).toAbsolutePath().normalize();
+        String avatarLocation = avatarDir.toUri().toString();
+        if (!avatarLocation.endsWith("/")) avatarLocation += "/";
+        String avatarPrefix = wxProperties.getAvatarUrlPrefix();
+        if (!avatarPrefix.startsWith("/")) avatarPrefix = "/" + avatarPrefix;
+        registry.addResourceHandler(avatarPrefix + "/**").addResourceLocations(avatarLocation);
     }
 }

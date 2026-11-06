@@ -22,8 +22,9 @@ public class MemberAdminController {
     }
 
     @PostMapping
-    public Result<?> create(@Valid @RequestBody AdminDtos.MemberCreate req) {
-        AuthUtil.requireAdmin();
+    public Result<AdminDtos.MemberCreateVO> create(@Valid @RequestBody AdminDtos.MemberCreate req) {
+        // Q13：教练买课时也可建档，并把返回的认领码线下交给会员
+        AuthUtil.requireStaff();
         return Result.ok(memberService.create(req));
     }
 
@@ -35,7 +36,9 @@ public class MemberAdminController {
 
     @PutMapping("/{id}")
     public Result<Void> update(@PathVariable Long id, @RequestBody AdminDtos.MemberUpdate req) {
-        AuthUtil.requireAdmin();
+        // 教练也需修正建档手机号（会员认领失败时的主要补救手段）；
+        // 改绑教练、课包增购/课时调整等高危操作仍保持 requireAdmin()
+        AuthUtil.requireStaff();
         memberService.updateMember(id, req);
         return Result.ok();
     }

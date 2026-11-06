@@ -15,6 +15,6 @@ public final class MemberDtos {
     public record HomeResponse(String memberName, CoachBrief coach, boolean coachOnLeaveToday,
                                PackageInfo packageInfo, java.util.List<CoachBrief> coaches, Studio studio) {}
 
-    public record MeResponse(String name, String phone, String coachName,
+    public record MeResponse(String name, String phone, String coachName, String avatarUrl,
                              int remainSessions, int consumedSessions, int upcoming, int packageCount) {}
 }

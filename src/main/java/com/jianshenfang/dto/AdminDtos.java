@@ -18,7 +18,11 @@ public final class AdminDtos {
             Long coachId,
             String password) {}
 
-    public record MemberUpdate(String name, Integer gender, String birthday, Long coachId) {}
+    public record MemberUpdate(String name, String phone, Integer gender, String birthday, Long coachId) {}
+
+    /** 建档结果：返回认领码，由教练线下交给会员 */
+    public record MemberCreateVO(Long memberId, String name, String phone,
+                                 String claimCode, String claimCodeExpireAt) {}
 
     public record BindCoach(Long coachId, String remark) {}
 
