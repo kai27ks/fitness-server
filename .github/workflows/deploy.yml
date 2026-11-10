@@ -52,9 +52,9 @@ jobs:
           # 1) 确保产物目录存在（前端仓库也会用同一个 incoming）
           ssh -p "$PORT" "${SSH_OPT[@]}" "$TARGET" 'mkdir -p ~/incoming/dist'
 
-          # 2) 上传 jar，统一重命名为 app.jar（deploy.sh 的约定）
+          # 2) 上传构建生成的 app.jar（deploy.sh 的约定）
           scp -P "$PORT" "${SSH_OPT[@]}" \
-            target/jianshenfang-1.0-SNAPSHOT.jar "$TARGET:~/incoming/app.jar"
+            target/app.jar "$TARGET:~/incoming/app.jar"
 
           # 3) 同步最新部署脚本，保证服务器上的脚本不与仓库分叉
           scp -P "$PORT" "${SSH_OPT[@]}" \
@@ -69,5 +69,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: app-jar
-          path: target/jianshenfang-1.0-SNAPSHOT.jar
+          path: target/app.jar
           retention-days: 7

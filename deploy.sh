@@ -9,8 +9,8 @@
 #   ./deploy.sh --incoming /path       # 指定产物目录
 #   ./deploy.sh --help
 #
-# CI / 本地先把产物放到服务器的 ~/incoming/（jar 统一重命名为 app.jar）：
-#   scp target/jianshenfang-1.0-SNAPSHOT.jar app@<IP>:~/incoming/app.jar
+# CI / 本地先把产物放到服务器的 ~/incoming/：
+#   scp target/app.jar app@<IP>:~/incoming/app.jar
 #   scp -r ../vue3-jianshenfang/dist/* app@<IP>:~/incoming/dist/
 #   ssh app@<IP> "/opt/fitness/deploy.sh"
 #
