@@ -16,6 +16,14 @@ mybatis-plus:
     map-underscore-to-camel-case: true
 
 app:
+  # 会员 / 教练「我的」页底部的技术支持入口；修改后重启，管理员不展示
+  support:
+    enabled: ${SUPPORT_ENABLED:true}
+    title: 系统维护与技术支持
+    description: 使用问题反馈、功能建议或系统开发维护咨询，欢迎联系。
+    developer-name: ${SUPPORT_DEVELOPER_NAME:}
+    phone: ${SUPPORT_PHONE:15805080815}
+    email: ${SUPPORT_EMAIL:kai27ks@163.com}
   package:
     # 课包到期前 N 天提示「即将到期」，可按需调整
     expiring-days: 7

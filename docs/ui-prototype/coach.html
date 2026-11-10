@@ -176,6 +176,22 @@ body{background:#E9EDF1;font-family:-apple-system,BlinkMacSystemFont,"PingFang S
 .mi i{width:34px;height:34px;border-radius:11px;display:flex;align-items:center;justify-content:center}
 .mi i svg{width:17px;height:17px;stroke:#fff;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .mi .arr{margin-left:auto;color:#C6CDD5}
+/* 系统维护入口：默认收起，点击后查看电话与邮箱 */
+.support-phone .me-hero{flex-shrink:0}
+.scroll.support-scroll{min-height:0;overflow-y:auto}
+.support-contact{margin:10px 16px 0;color:#687582;font-size:12px}
+.support-contact summary{min-height:44px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;list-style:none}
+.support-contact summary::-webkit-details-marker{display:none}
+.support-contact summary svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.6;transition:transform .2s}
+.support-contact[open] summary svg{transform:rotate(90deg)}
+.support-contact summary:focus-visible,.support-link:focus-visible{outline:2px solid var(--primary-deep);outline-offset:3px;border-radius:6px}
+.support-body{padding:14px;border:1px solid #E1E7EC;border-radius:14px;background:#fff}
+.support-description{line-height:1.8;margin-bottom:8px}
+.support-link{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;min-height:44px;text-decoration:none;color:var(--ink)}
+.support-link+.support-link{border-top:1px solid var(--line)}
+.support-label{color:#687582;font-size:11px}
+.support-value{flex:1;min-width:0;overflow-wrap:anywhere;font-size:13px}
+.support-action{color:var(--primary-deep);font-size:11px}
 
 /* ===== 8 请假 ===== */
 .leave-type{display:flex;gap:10px;margin-bottom:16px}
@@ -471,7 +487,7 @@ body{background:#E9EDF1;font-family:-apple-system,BlinkMacSystemFont,"PingFang S
 
 <!-- ========== 7 我的（教练端） ========== -->
 <div class="screen-wrap">
-  <div class="phone"><div class="notch"></div><div class="scr">
+  <div class="phone support-phone"><div class="notch"></div><div class="scr">
     <div class="me-hero">
       <div class="row">
         <div class="avatar">陈</div>
@@ -485,7 +501,7 @@ body{background:#E9EDF1;font-family:-apple-system,BlinkMacSystemFont,"PingFang S
         <div><b>92%</b><small>满课率</small></div>
       </div>
     </div>
-    <div class="scroll" style="padding-top:0">
+    <div class="scroll support-scroll" style="padding-top:0">
       <div class="menu" style="margin-top:52px">
         <div class="mi"><i class="i-green"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="3"/><path d="M8 2v4M16 2v4M3 10h18"/></svg></i>我的课表<span class="arr">›</span></div>
         <div class="mi"><i class="i-orange"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></i>提交请假<span class="arr">›</span></div>
@@ -493,6 +509,15 @@ body{background:#E9EDF1;font-family:-apple-system,BlinkMacSystemFont,"PingFang S
         <div class="mi"><i class="i-purple"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg></i>消息通知<span class="arr">›</span></div>
         <div class="mi"><i class="i-dark"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3h.1a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.5h.1a1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9v.1a1.7 1.7 0 0 0 1.5 1h.2a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1z"/></svg></i>设置<span class="arr">›</span></div>
       </div>
+      <div style="text-align:center;color:#B7BFC8;font-size:11px;margin-top:20px">私教工作室 · 教练端 V1.0</div>
+      <details class="support-contact">
+        <summary><span>系统维护与技术支持</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></summary>
+        <div class="support-body">
+          <p class="support-description">使用问题反馈、功能建议或系统开发维护咨询，欢迎联系。</p>
+          <a class="support-link" href="tel:15805080815"><span class="support-label">联系电话</span><span class="support-value">15805080815</span><span class="support-action">拨打</span></a>
+          <a class="support-link" href="mailto:kai27ks@163.com"><span class="support-label">联系邮箱</span><span class="support-value">kai27ks@163.com</span><span class="support-action">邮件</span></a>
+        </div>
+      </details>
     </div>
     <div class="tabbar">
       <div class="tab"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>工作台<div class="dot"></div></div>
@@ -501,7 +526,7 @@ body{background:#E9EDF1;font-family:-apple-system,BlinkMacSystemFont,"PingFang S
       <div class="tab on"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>我的<div class="dot"></div></div>
     </div>
   </div></div>
-  <div class="screen-label">我的 · 教练端<small>个人数据悬浮卡 + 分组菜单，资质/请假入口齐全</small></div>
+  <div class="screen-label">我的 · 教练端<small>页底技术支持入口 · 点击展开电话 / 邮箱，管理员不展示</small></div>
 </div>
 
 <!-- ========== 8 请假 ========== -->
