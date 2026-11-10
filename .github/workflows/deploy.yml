@@ -1,0 +1,73 @@
+name: 部署后端
+
+# 仓库：kai27ks/fitness-server（main）
+# 配套：服务器 /opt/fitness/deploy.sh，由本流水线每次自动同步到服务器
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/**'
+  workflow_dispatch:
+
+# 同仓库内不并发；跨仓库并发由 deploy.sh 的 flock 在服务器侧串行化
+concurrency:
+  group: fitness-server-deploy
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+
+      - name: 准备 JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: 构建 jar（测试跳过，与本地 mvn clean package -DskipTests 一致）
+        run: mvn -B -DskipTests package
+
+      - name: 装载部署私钥
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: 上传并部署
+        env:
+          HOST: '123.206.230.38'
+          USER: 'app'
+          PORT: '22'
+        run: |
+          set -euo pipefail
+          SSH_OPT=(-o StrictHostKeyChecking=accept-new -o ConnectTimeout=15)
+          TARGET="$USER@$HOST"
+
+          # 1) 确保产物目录存在（前端仓库也会用同一个 incoming）
+          ssh -p "$PORT" "${SSH_OPT[@]}" "$TARGET" 'mkdir -p ~/incoming/dist'
+
+          # 2) 上传 jar，统一重命名为 app.jar（deploy.sh 的约定）
+          scp -P "$PORT" "${SSH_OPT[@]}" \
+            target/jianshenfang-1.0-SNAPSHOT.jar "$TARGET:~/incoming/app.jar"
+
+          # 3) 同步最新部署脚本，保证服务器上的脚本不与仓库分叉
+          scp -P "$PORT" "${SSH_OPT[@]}" \
+            deploy.sh "$TARGET:/opt/fitness/deploy.sh"
+
+          # 4) 只换后端：备份 → 替换 → 重启 → 健康检查（失败自动回滚）
+          ssh -p "$PORT" "${SSH_OPT[@]}" "$TARGET" \
+            'chmod 750 /opt/fitness/deploy.sh && /opt/fitness/deploy.sh --backend-only'
+
+      - name: 保留产物便于排查
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-jar
+          path: target/jianshenfang-1.0-SNAPSHOT.jar
+          retention-days: 7

@@ -1,0 +1,43 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/fitness?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
+    username: admin
+    password: 5080815Kai
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  sql:
+    init:
+      mode: never
+      schema-locations: classpath:schema.sql
+      data-locations: classpath:data.sql
+  jackson:
+    time-zone: Asia/Shanghai
+    date-format: yyyy-MM-dd HH:mm:ss
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+app:
+  # 短信验证码链路已下线（Q2=A），不再有 sms-mock 开关
+  jwt-secret: dev-jwt-secret-please-change-to-32-bytes-min!!
+  jwt-expire-days: 7
+  studio:
+    name: 03 健身工作室
+    address: 新建村美食城9号 e4
+    hours: 09:00 - 21:00
+    open-hour: 9
+    close-hour: 21
+
+# 本地无公众号资质时走 mock：/wechat/oauth/entry?mockOpenid=test01 即可模拟不同微信用户
+wx:
+  mock: true
+  callback-base-url: http://localhost:8080
+  h5-base-url: http://localhost:5173
+  # 改成 true 可强制显示「引导关注」页，便于本地联调 Q10
+  mock-follow-required: false
+  # dev 未配置模板 ID 时通知整体跳过；填任意非空模板 ID 即可在管理端看到 SKIPPED 记录
+  # 要真实发送需 mock=false + 真实公众号 + 真实模板 ID
+  notify-enabled: true
