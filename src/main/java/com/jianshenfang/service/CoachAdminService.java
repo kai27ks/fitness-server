@@ -4,11 +4,12 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.jianshenfang.auth.AuthContext;
 import com.jianshenfang.common.BusinessException;
 import com.jianshenfang.dto.AdminDtos;
+import com.jianshenfang.dto.CoachAccountDtos;
 import com.jianshenfang.entity.*;
 import com.jianshenfang.mapper.*;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -25,10 +26,9 @@ public class CoachAdminService {
     private final CoachMapper coachMapper;
     private final CoachQualificationMapper qualMapper;
     private final CoachLeaveMapper leaveMapper;
-    private final SysUserMapper userMapper;
     private final BookingMapper bookingMapper;
     private final OperationLogService logService;
-    private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+    private final CoachAccountService accountService;
 
     public List<Coach> list(Long status) {
         LambdaQueryWrapper<Coach> w = new LambdaQueryWrapper<Coach>().orderByAsc(Coach::getId);
@@ -44,27 +44,18 @@ public class CoachAdminService {
         return coach;
     }
 
+    @Transactional
     public Coach create(AdminDtos.CoachCreate req) {
-        if (req.phone() != null && !req.phone().isBlank()) {
-            if (userMapper.selectCount(new LambdaQueryWrapper<SysUser>().eq(SysUser::getPhone, req.phone())) > 0) {
-                throw new BusinessException("该手机号账号已存在");
-            }
-        }
-        SysUser user = null;
-        if (req.phone() != null && !req.phone().isBlank()) {
-            user = new SysUser();
-            user.setPhone(req.phone());
-            user.setPassword(encoder.encode("123456"));
-            user.setRole("COACH");
-            user.setStatus(1);
-            userMapper.insert(user);
-        }
         Coach c = new Coach();
         c.setName(req.name());
         c.setIntro(req.intro());
         c.setStatus(req.status() == null ? 1 : req.status());
-        c.setUserId(user == null ? null : user.getId());
         coachMapper.insert(c);
+        if (req.phone() != null && !req.phone().isBlank()) {
+            CoachAccountDtos.Account account = accountService.configure(c.getId(),
+                    new CoachAccountDtos.Configure("CREATE", req.phone().strip(), req.initialPassword()));
+            c.setUserId(account.userId());
+        }
         logService.log("CREATE_COACH", "COACH", c.getId(), "新增教练 " + req.name());
         return c;
     }

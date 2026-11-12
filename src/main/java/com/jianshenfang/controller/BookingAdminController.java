@@ -8,6 +8,8 @@ import com.jianshenfang.dto.BookingDtos;
 import com.jianshenfang.service.BookingService;
 import com.jianshenfang.service.CoachAdminService;
 import com.jianshenfang.service.OperationLogService;
+import com.jianshenfang.service.StaffBookingService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,6 +23,31 @@ public class BookingAdminController {
     private final BookingService bookingService;
     private final CoachAdminService coachService;
     private final OperationLogService logService;
+    private final StaffBookingService staffBookingService;
+
+    @GetMapping("/members")
+    public Result<?> members(@RequestParam(required = false) String keyword) {
+        AuthUtil.requireStaff();
+        return Result.ok(staffBookingService.members(keyword));
+    }
+
+    @GetMapping("/members/{memberId}/options")
+    public Result<?> options(@PathVariable Long memberId) {
+        AuthUtil.requireStaff();
+        return Result.ok(staffBookingService.options(memberId));
+    }
+
+    @GetMapping("/members/{memberId}/slots")
+    public Result<?> slots(@PathVariable Long memberId, @RequestParam Long packageId, @RequestParam String date) {
+        AuthUtil.requireStaff();
+        return Result.ok(staffBookingService.slots(memberId, packageId, date));
+    }
+
+    @PostMapping
+    public Result<BookingDtos.CreateSuccess> create(@Valid @RequestBody BookingDtos.StaffCreateRequest req) {
+        AuthUtil.requireStaff();
+        return Result.ok(staffBookingService.create(req));
+    }
 
     @GetMapping
     public Result<?> list(@RequestParam(required = false) Long coachId,
@@ -40,6 +67,7 @@ public class BookingAdminController {
     @DeleteMapping("/{id}")
     public Result<Void> cancel(@PathVariable Long id, @RequestBody(required = false) AdminDtos.CancelRequest req) {
         AuthUtil.requireStaff();
+        staffBookingService.requireBookingAccess(id);
         String reason = req == null ? null : req.reason();
         bookingService.staffCancel(AuthContext.userId(), id, reason);
         logService.log("CANCEL_BOOKING", "BOOKING", id, reason);
@@ -49,6 +77,7 @@ public class BookingAdminController {
     @PostMapping("/{id}/manual-checkin")
     public Result<Void> manualCheckIn(@PathVariable Long id) {
         AuthUtil.requireStaff();
+        staffBookingService.requireBookingAccess(id);
         bookingService.manualCheckIn(id);
         logService.log("MANUAL_CHECKIN", "BOOKING", id, "管理端手动补签");
         return Result.ok();

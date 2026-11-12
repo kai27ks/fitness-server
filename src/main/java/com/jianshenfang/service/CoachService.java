@@ -71,6 +71,12 @@ public class CoachService {
      * 时段状态：FREE 可约 / BOOKED 已被他人约（置灰不可选）/ MINE 我的预约 / LEAVE 教练请假 / PAST 已过时间
      */
     public BookingDtos.SlotsResponse slots(Long coachId, String dateStr, Long courseId, Long userId) {
+        Member member = memberMapper.selectOne(new LambdaQueryWrapper<Member>().eq(Member::getUserId, userId));
+        return slotsForMember(coachId, dateStr, courseId, member);
+    }
+
+    /** 代约时使用已授权的目标会员，时段冲突与「会员已约」标记按该会员计算。 */
+    public BookingDtos.SlotsResponse slotsForMember(Long coachId, String dateStr, Long courseId, Member member) {
         Coach coach = coachMapper.selectById(coachId);
         if (coach == null || coach.getStatus() != 1) {
             throw new BusinessException("教练不存在或已停用");
@@ -89,7 +95,6 @@ public class CoachService {
             throw new BusinessException("不能查询过去的日期");
         }
 
-        Member member = memberMapper.selectOne(new LambdaQueryWrapper<Member>().eq(Member::getUserId, userId));
         Long memberId = member == null ? null : member.getId();
 
         LocalDateTime dayStart = date.atStartOfDay();
@@ -101,17 +106,23 @@ public class CoachService {
                 .ge(CoachLeave::getEndTime, dayStart));
 
         List<Booking> bookings = bookingMapper.selectList(new LambdaQueryWrapper<Booking>()
-                .eq(Booking::getCoachId, coachId)
+                .and(q -> {
+                    q.eq(Booking::getCoachId, coachId);
+                    if (memberId != null) q.or().eq(Booking::getMemberId, memberId);
+                })
                 .in(Booking::getStatus, Booking.BOOKED, Booking.CHECKED_IN, Booking.COMPLETED)
                 .lt(Booking::getStartTime, dayEnd)
                 .gt(Booking::getEndTime, dayStart));
 
         LocalDateTime now = LocalDateTime.now();
-        LocalTime close = LocalTime.of(closeHour, 0);
         int duration = course.getDurationMin();
+        if (duration <= 0 || duration > (closeHour - openHour) * 60) {
+            throw new BusinessException("课程时长不符合营业时间要求");
+        }
         List<BookingDtos.Slot> slots = new ArrayList<>();
 
-        for (LocalTime t = LocalTime.of(openHour, 0); !t.plusMinutes(duration).isAfter(close); t = t.plusMinutes(duration)) {
+        for (int minute = openHour * 60; minute + duration <= closeHour * 60; minute += duration) {
+            LocalTime t = LocalTime.of(minute / 60, minute % 60);
             LocalDateTime start = date.atTime(t);
             LocalDateTime end = start.plusMinutes(duration);
             String status;

@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -46,14 +47,27 @@ public class BookingService {
     @Value("${app.studio.open-hour:9}") private int openHour;
     @Value("${app.studio.close-hour:21}") private int closeHour;
 
+    @Transactional
     public BookingDtos.CreateSuccess create(Long userId, BookingDtos.CreateRequest req) {
         Member member = memberService.currentMember(userId);
+        return createForMember(member.getId(), null, req);
+    }
+
+    /** 自约与代约共用校验和锁；requiredCoachId 用于重新核对教练归属，防止代约期间被改绑。 */
+    @Transactional
+    public BookingDtos.CreateSuccess createForMember(Long memberId, Long requiredCoachId, BookingDtos.CreateRequest req) {
+        Member member = memberMapper.selectOne(new LambdaQueryWrapper<Member>()
+                .eq(Member::getId, memberId).last("FOR UPDATE"));
+        if (member == null) throw new BusinessException("会员不存在");
+        if (requiredCoachId != null && !requiredCoachId.equals(member.getCoachId())) {
+            throw new BusinessException(403, "会员教练归属已变更，请刷新后重试");
+        }
 
         MemberPackage pkg = packageMapper.selectById(req.packageId());
         if (pkg == null || !pkg.getMemberId().equals(member.getId())) {
             throw new BusinessException("课包不存在");
         }
-        if (!"ACTIVE".equals(pkg.getStatus()) || pkg.getExpireDate().isBefore(LocalDate.now())) {
+        if (!"ACTIVE".equals(pkg.getStatus()) || (pkg.getExpireDate() != null && pkg.getExpireDate().isBefore(LocalDate.now()))) {
             throw new BusinessException("课包已过期，请续课后再约");
         }
         if (!pkg.getCourseId().equals(req.courseId())) {
@@ -71,7 +85,8 @@ public class BookingService {
         if (member.getCoachId() == null) {
             throw new BusinessException("暂未绑定专属教练，请联系前台");
         }
-        Coach coach = coachMapper.selectById(member.getCoachId());
+        Coach coach = coachMapper.selectOne(new LambdaQueryWrapper<Coach>()
+                .eq(Coach::getId, member.getCoachId()).last("FOR UPDATE"));
         if (coach == null || coach.getStatus() != 1) {
             throw new BusinessException("专属教练已停用，请联系前台改绑");
         }
@@ -84,6 +99,14 @@ public class BookingService {
         }
         LocalDateTime end = start.plusMinutes(course.getDurationMin());
 
+        if (course.getDurationMin() <= 0 || end.toLocalDate().isAfter(start.toLocalDate())) {
+            throw new BusinessException("课程时长不符合营业时间要求");
+        }
+        if ((pkg.getStartDate() != null && start.toLocalDate().isBefore(pkg.getStartDate()))
+                || (pkg.getExpireDate() != null && start.toLocalDate().isAfter(pkg.getExpireDate()))) {
+            throw new BusinessException("所选日期不在课包有效期内");
+        }
+
         if (!start.isAfter(LocalDateTime.now())) {
             throw new BusinessException("请选择晚于当前时间的时段");
         }
@@ -94,31 +117,31 @@ public class BookingService {
         }
 
         // 教练该时段请假
-        Long leave = leaveMapper.selectCount(new LambdaQueryWrapper<CoachLeave>()
+        List<CoachLeave> leave = leaveMapper.selectList(new LambdaQueryWrapper<CoachLeave>()
                 .eq(CoachLeave::getCoachId, coach.getId())
                 .lt(CoachLeave::getStartTime, end)
-                .gt(CoachLeave::getEndTime, start));
-        if (leave > 0) {
+                .gt(CoachLeave::getEndTime, start).last("FOR UPDATE"));
+        if (!leave.isEmpty()) {
             throw new BusinessException("教练该时段请假，请选择其他时间");
         }
 
         // 教练时段冲突（唯一索引兜底防超约）
-        Long coachConflict = bookingMapper.selectCount(new LambdaQueryWrapper<Booking>()
+        List<Booking> coachConflict = bookingMapper.selectList(new LambdaQueryWrapper<Booking>()
                 .eq(Booking::getCoachId, coach.getId())
                 .in(Booking::getStatus, OCCUPIED)
                 .lt(Booking::getStartTime, end)
-                .gt(Booking::getEndTime, start));
-        if (coachConflict > 0) {
+                .gt(Booking::getEndTime, start).last("FOR UPDATE"));
+        if (!coachConflict.isEmpty()) {
             throw new BusinessException("手慢了，该时段刚被预约");
         }
 
         // 会员自身时段冲突
-        Long memberConflict = bookingMapper.selectCount(new LambdaQueryWrapper<Booking>()
+        List<Booking> memberConflict = bookingMapper.selectList(new LambdaQueryWrapper<Booking>()
                 .eq(Booking::getMemberId, member.getId())
                 .in(Booking::getStatus, OCCUPIED)
                 .lt(Booking::getStartTime, end)
-                .gt(Booking::getEndTime, start));
-        if (memberConflict > 0) {
+                .gt(Booking::getEndTime, start).last("FOR UPDATE"));
+        if (!memberConflict.isEmpty()) {
             throw new BusinessException("您该时段已有课程安排");
         }
 
@@ -244,13 +267,16 @@ public class BookingService {
     /** 管理端约课列表：按条件筛选（教练仅看名下） */
     public List<BookingDtos.AdminBookingVO> adminList(Long coachId, AdminDtos.BookingQuery q) {
         if (q == null) return List.of();
-        LambdaQueryWrapper<Booking> wrapper = new LambdaQueryWrapper<Booking>().orderByDesc(Booking::getStartTime);
+        LambdaQueryWrapper<Booking> wrapper = new LambdaQueryWrapper<>();
+        if (Booking.BOOKED.equals(q.status())) wrapper.orderByAsc(Booking::getStartTime);
+        else wrapper.orderByDesc(Booking::getStartTime);
         if (coachId != null) wrapper.eq(Booking::getCoachId, coachId);
         if (q.coachId() != null) wrapper.eq(Booking::getCoachId, q.coachId());
         if (q.memberId() != null) wrapper.eq(Booking::getMemberId, q.memberId());
         if (q.status() != null && !q.status().isBlank()) wrapper.eq(Booking::getStatus, q.status());
         if (q.date() != null && !q.date().isBlank()) {
-            wrapper.ge(Booking::getStartTime, q.date() + "T00:00:00").lt(Booking::getStartTime, q.date() + "T23:59:59");
+            LocalDate date = LocalDate.parse(q.date());
+            wrapper.ge(Booking::getStartTime, date.atStartOfDay()).lt(Booking::getStartTime, date.plusDays(1).atStartOfDay());
         }
         if (q.startDate() != null) wrapper.ge(Booking::getStartTime, q.startDate() + "T00:00:00");
         if (q.endDate() != null) wrapper.le(Booking::getStartTime, q.endDate() + "T23:59:59");

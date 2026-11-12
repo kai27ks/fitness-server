@@ -31,8 +31,9 @@ app:
 # 本地无公众号资质时走 mock：/wechat/oauth/entry?mockOpenid=test01 即可模拟不同微信用户
 wx:
   mock: true
-  callback-base-url: http://localhost:8080
-  h5-base-url: http://localhost:5173
+  # 内网穿透：外部域名 → 本机 5173（vite），再由 vite 把 /api /upload /wechat 转给 8080
+  callback-base-url: http://13230zl69xe33.vicp.fun
+  h5-base-url: http://13230zl69xe33.vicp.fun
   # 改成 true 可强制显示「引导关注」页，便于本地联调 Q10
   mock-follow-required: false
   # dev 未配置模板 ID 时通知整体跳过；填任意非空模板 ID 即可在管理端看到 SKIPPED 记录

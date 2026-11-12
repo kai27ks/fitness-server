@@ -70,7 +70,8 @@ public final class AdminDtos {
             @NotBlank(message = "姓名必填") String name,
             String phone,
             String intro,
-            Integer status) {}
+            Integer status,
+            String initialPassword) {}
 
     public record CoachUpdate(String name, String intro, String photo, Integer status) {}
 

@@ -95,7 +95,8 @@ CREATE TABLE IF NOT EXISTS booking (
     canceled_at  DATETIME     NULL,
     checked_in_at DATETIME    NULL,
     create_time  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY uk_coach_slot (coach_id, start_time),
+    active_start_time DATETIME GENERATED ALWAYS AS (CASE WHEN status = 'CANCELED' THEN NULL ELSE start_time END) STORED,
+    UNIQUE KEY uk_coach_slot (coach_id, active_start_time),
     KEY idx_member_start (member_id, start_time),
     KEY idx_status_start (status, start_time)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT '预约记录';

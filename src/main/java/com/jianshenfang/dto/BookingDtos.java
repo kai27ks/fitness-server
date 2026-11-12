@@ -27,6 +27,21 @@ public final class BookingDtos {
 
     public record CreateSuccess(Long bookingId, int remainSessions) {}
 
+    /** 代约的教练与课程均从会员归属、课包推导，客户端不能指定其他教练。 */
+    public record StaffCreateRequest(
+            @NotNull(message = "请选择会员") Long memberId,
+            @NotNull(message = "请选择课包") Long packageId,
+            @NotBlank(message = "请选择日期") String date,
+            @NotBlank(message = "请选择时段") String startTime) {}
+
+    public record BookingMember(Long id, String name, String phone, Long coachId, String coachName) {}
+
+    public record PackageOption(Long id, Long courseId, String courseName, int durationMin,
+                                int remainSessions, String startDate, String expireDate,
+                                String status, boolean courseActive) {}
+
+    public record StaffOptions(BookingMember member, List<PackageOption> packages) {}
+
     /** 管理端预约列表项：含会员名 */
     public record AdminBookingVO(Long id, String memberName, String courseName, String coachName,
                                  String startTime, String endTime, String status,
