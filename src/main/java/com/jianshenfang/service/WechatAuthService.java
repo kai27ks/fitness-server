@@ -1,6 +1,7 @@
 package com.jianshenfang.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -158,7 +159,7 @@ public class WechatAuthService {
     // ==================== 认领 ====================
 
     public WechatDtos.ClaimResponse claim(WechatDtos.ClaimRequest req) {
-        JsonNode p = consume(CLAIM_TICKET, req.claimTicket());
+        JsonNode p = readTicket(CLAIM_TICKET, req.claimTicket());
         WechatDtos.Identity id = new WechatDtos.Identity(
                 text(p, "appid"), text(p, "openid"), text(p, "unionid"),
                 text(p, "avatarUrl"), text(p, "nickname"));
@@ -195,13 +196,14 @@ public class WechatAuthService {
             throw new BusinessException("认领码不正确，请核对小票或联系教练");
         }
 
-        // 事务内完成绑定；冲突由唯一索引与 bindService 双重兜底
-        bindService.bind(id, member.getUserId(), member.getId(), code);
-
         SysUser user = userMapper.selectById(member.getUserId());
         if (user == null || user.getStatus() == null || user.getStatus() != 1) {
             throw new BusinessException("账号不可用，请联系前台");
         }
+        // 输入校验失败时保留票据，允许用户在有效期内重试；成功前原子核销防重放。
+        consume(CLAIM_TICKET, req.claimTicket());
+        bindService.bind(id, member.getUserId(), member.getId(), code);
+
         WechatAccount bound = wechatAccountMapper.selectOne(new LambdaQueryWrapper<WechatAccount>()
                 .eq(WechatAccount::getOpenid, id.openid()));
         boolean subscribed = refreshSubscribe(id.openid(), bound);
@@ -313,6 +315,20 @@ public class WechatAuthService {
 
     /** 校验并立即核销，防重放 */
     private JsonNode consume(String type, String token) {
+        JsonNode payload = readTicket(type, token);
+        int updated = tempTokenMapper.update(null, new LambdaUpdateWrapper<WechatTempToken>()
+                .eq(WechatTempToken::getToken, token)
+                .eq(WechatTempToken::getType, type)
+                .isNull(WechatTempToken::getUsedAt)
+                .gt(WechatTempToken::getExpireAt, LocalDateTime.now())
+                .set(WechatTempToken::getUsedAt, LocalDateTime.now()));
+        if (updated != 1) {
+            throw new BusinessException("凭证已过期或已使用，请重新从公众号进入");
+        }
+        return payload;
+    }
+
+    private JsonNode readTicket(String type, String token) {
         if (token == null || token.isBlank()) {
             throw new BusinessException("凭证缺失，请重新从公众号进入");
         }
@@ -321,10 +337,6 @@ public class WechatAuthService {
                 || t.getExpireAt().isBefore(LocalDateTime.now())) {
             throw new BusinessException("凭证已过期或已使用，请重新从公众号进入");
         }
-        WechatTempToken upd = new WechatTempToken();
-        upd.setToken(token);
-        upd.setUsedAt(LocalDateTime.now());
-        tempTokenMapper.updateById(upd);
         try {
             return objectMapper.readTree(t.getPayload());
         } catch (Exception e) {

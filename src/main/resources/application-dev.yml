@@ -2,6 +2,8 @@ server:
   port: 8080
 
 spring:
+  config:
+    import: optional:file:./config/wechat-dev.properties
   datasource:
     url: jdbc:mysql://localhost:3306/fitness?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
     username: root
@@ -28,14 +30,17 @@ app:
     open-hour: 9
     close-hour: 21
 
-# 本地无公众号资质时走 mock：/wechat/oauth/entry?mockOpenid=test01 即可模拟不同微信用户
+# 本地连接微信测试号；凭据从 Git 忽略的 config/wechat-dev.properties 加载
 wx:
-  mock: true
-  # 内网穿透：外部域名 → 本机 5173（vite），再由 vite 把 /api /upload /wechat 转给 8080
-  callback-base-url: http://13230zl69xe33.vicp.fun
-  h5-base-url: http://13230zl69xe33.vicp.fun
-  # 改成 true 可强制显示「引导关注」页，便于本地联调 Q10
+  appid: ${WX_APPID:wxdc874e48e6e85235}
+  mock: false
+  # 花生壳 HTTPS → 本机 Vite 5173 → 后端 8080
+  callback-base-url: ${WX_CALLBACK_BASE_URL:https://13230zl69xe33.vicp.fun}
+  h5-base-url: ${WX_H5_BASE_URL:https://13230zl69xe33.vicp.fun}
   mock-follow-required: false
-  # dev 未配置模板 ID 时通知整体跳过；填任意非空模板 ID 即可在管理端看到 SKIPPED 记录
-  # 要真实发送需 mock=false + 真实公众号 + 真实模板 ID
   notify-enabled: true
+  # 本地测试三个场景共用同一份课程通知模板
+  templates:
+    BOOKING_CREATED: ${WX_TPL_BOOKING_CREATED:uBs2wZygltChLhsHisUHg6biGh16otfgsjALFQJ7hQY}
+    BOOKING_CANCELED: ${WX_TPL_BOOKING_CANCELED:uBs2wZygltChLhsHisUHg6biGh16otfgsjALFQJ7hQY}
+    BOOKING_REMINDER: ${WX_TPL_BOOKING_REMINDER:uBs2wZygltChLhsHisUHg6biGh16otfgsjALFQJ7hQY}
