@@ -24,5 +24,9 @@ public class MemberPackage {
     private LocalDate startDate;
     private LocalDate expireDate;
     private String status;
+    /** 来源：NEW 新购 / LEGACY_IMPORT 旧数据迁移 */
+    private String source;
+    /** 旧数据迁移批次，便于按批次回滚 */
+    private Long importBatchId;
     private LocalDateTime createTime;
 }

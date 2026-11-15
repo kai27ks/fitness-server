@@ -78,9 +78,47 @@ CREATE TABLE IF NOT EXISTS member_package (
     start_date      DATE          NOT NULL,
     expire_date     DATE          NOT NULL,
     status          VARCHAR(20)   NOT NULL DEFAULT 'ACTIVE',
+    source          VARCHAR(20)   NULL COMMENT 'NEW / LEGACY_IMPORT',
+    import_batch_id BIGINT        NULL COMMENT '旧数据迁移批次',
     create_time     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY uk_member_course (member_id, course_id)
+    UNIQUE KEY uk_member_course (member_id, course_id),
+    KEY idx_pkg_batch (import_batch_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT '会员课包';
+
+CREATE TABLE IF NOT EXISTS legacy_import_batch (
+    id             BIGINT AUTO_INCREMENT PRIMARY KEY,
+    file_name      VARCHAR(120) NULL,
+    total_rows     INT          NOT NULL DEFAULT 0,
+    member_count   INT          NOT NULL DEFAULT 0,
+    package_count  INT          NOT NULL DEFAULT 0,
+    skipped_count  INT          NOT NULL DEFAULT 0,
+    failed_count   INT          NOT NULL DEFAULT 0,
+    operator_id    BIGINT       NULL,
+    create_time    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT '旧会员资料导入批次';
+
+CREATE TABLE IF NOT EXISTS legacy_import_row (
+    id             BIGINT AUTO_INCREMENT PRIMARY KEY,
+    batch_id       BIGINT        NOT NULL,
+    row_no         INT           NOT NULL,
+    phone          VARCHAR(20)   NULL,
+    name           VARCHAR(30)   NULL,
+    coach_name     VARCHAR(30)   NULL,
+    card_name      VARCHAR(50)   NULL,
+    course_type    VARCHAR(50)   NULL,
+    remain         INT           NULL,
+    card_no        VARCHAR(40)   NULL,
+    pay_type       VARCHAR(20)   NULL,
+    sales_name     VARCHAR(30)   NULL,
+    source_channel VARCHAR(20)   NULL,
+    remark         VARCHAR(255)  NULL,
+    member_id      BIGINT        NULL COMMENT '映射到的会员',
+    package_id     BIGINT        NULL COMMENT '映射到的课包',
+    status         VARCHAR(20)   NOT NULL DEFAULT 'OK' COMMENT 'OK / SKIPPED / FAILED',
+    err_msg        VARCHAR(255)  NULL,
+    KEY idx_batch (batch_id),
+    KEY idx_phone (phone)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT '旧会员资料原始行归档';
 
 CREATE TABLE IF NOT EXISTS booking (
     id           BIGINT AUTO_INCREMENT PRIMARY KEY,
