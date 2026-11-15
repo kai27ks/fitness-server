@@ -16,6 +16,8 @@ public class MemberPackage {
     private Long id;
     private Long memberId;
     private Long courseId;
+    /** 课包归属教练（旧数据迁移用，可空；新购课包可不填） */
+    private Long coachId;
     private Integer totalSessions;
     private Integer remainSessions;
     private BigDecimal totalPrice;

@@ -3,10 +3,13 @@ package com.jianshenfang.controller;
 import com.jianshenfang.auth.AuthUtil;
 import com.jianshenfang.common.Result;
 import com.jianshenfang.dto.AdminDtos;
+import com.jianshenfang.dto.MemberImportDtos;
 import com.jianshenfang.service.AdminMemberService;
+import com.jianshenfang.service.MemberImportService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/admin/members")
@@ -14,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 public class MemberAdminController {
 
     private final AdminMemberService memberService;
+    private final MemberImportService memberImportService;
 
     @GetMapping
     public Result<?> list(@RequestParam(required = false) String keyword, @RequestParam(required = false) Long coachId) {
@@ -61,5 +65,19 @@ public class MemberAdminController {
         AuthUtil.requireAdmin();
         memberService.adjustSessions(pid, req);
         return Result.ok();
+    }
+
+    /** 旧会员 Excel 导入：预览（只解析不落库），给管理员核对后再提交 */
+    @PostMapping("/import/preview")
+    public Result<MemberImportDtos.Preview> importPreview(@RequestParam("file") MultipartFile file) {
+        AuthUtil.requireAdmin();
+        return Result.ok(memberImportService.preview(file));
+    }
+
+    /** 旧会员 Excel 导入：正式落库（手机号已存在的会员会被跳过） */
+    @PostMapping("/import/commit")
+    public Result<MemberImportDtos.Result> importCommit(@RequestParam("file") MultipartFile file) {
+        AuthUtil.requireAdmin();
+        return Result.ok(memberImportService.commit(file));
     }
 }

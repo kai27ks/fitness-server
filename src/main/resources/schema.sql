@@ -71,6 +71,7 @@ CREATE TABLE IF NOT EXISTS member_package (
     id              BIGINT AUTO_INCREMENT PRIMARY KEY,
     member_id       BIGINT        NOT NULL,
     course_id       BIGINT        NOT NULL,
+    coach_id        BIGINT        NULL COMMENT '课包归属教练（旧数据迁移用，可空）',
     total_sessions  INT           NOT NULL,
     remain_sessions INT           NOT NULL,
     total_price     DECIMAL(10,2) NOT NULL,
