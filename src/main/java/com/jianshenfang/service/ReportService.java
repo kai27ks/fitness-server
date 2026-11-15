@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -123,6 +124,84 @@ public class ReportService {
         }
 
         return new ReportDtos.Courses(consumed, cancelRate, daily, coachRank(all));
+    }
+
+    /**
+     * 课程统计：按课程名称分组，可切换「总计 / 本月 / 本周」，组内再按教练细分。
+     *
+     * <p>口径：以 booking 为准，classes = 已消课（CHECKED_IN / COMPLETED），bookings = 预约总数（含取消），
+     * canceled = 取消数；按 classes 从高到低排序，课程名与教练名取自主档表，取不到时降级为「未知课程 / 未知教练」。
+     */
+    public ReportDtos.CourseStats courseStats(String range) {
+        String r = (range == null || range.isBlank()) ? "total" : range.trim().toLowerCase();
+        if (!"month".equals(r) && !"week".equals(r)) r = "total";
+
+        LocalDate today = LocalDate.now();
+        LocalDateTime from = null;
+        LocalDateTime to = null;
+        if ("week".equals(r)) {
+            LocalDate monday = today.with(DayOfWeek.MONDAY);
+            from = monday.atStartOfDay();
+            to = monday.plusDays(6).atTime(23, 59, 59);
+        } else if ("month".equals(r)) {
+            LocalDate first = today.withDayOfMonth(1);
+            from = first.atStartOfDay();
+            to = first.withDayOfMonth(first.lengthOfMonth()).atTime(23, 59, 59);
+        }
+
+        LambdaQueryWrapper<Booking> w = new LambdaQueryWrapper<>();
+        if (from != null) w.ge(Booking::getStartTime, from);
+        if (to != null) w.le(Booking::getStartTime, to);
+        List<Booking> all = bookingMapper.selectList(w);
+
+        Map<Long, String> courseNames = courseMapper.selectList(null).stream()
+                .collect(Collectors.toMap(CourseTemplate::getId,
+                        c -> c.getName() == null ? "未命名课程" : c.getName(), (a, b) -> a));
+        Map<Long, String> coachNames = coachMapper.selectList(null).stream()
+                .collect(Collectors.toMap(Coach::getId,
+                        c -> c.getName() == null ? "未命名教练" : c.getName(), (a, b) -> a));
+
+        int totalClasses = (int) all.stream().filter(ReportService::consumed).count();
+        int totalCanceled = (int) all.stream().filter(b -> Booking.CANCELED.equals(b.getStatus())).count();
+
+        List<ReportDtos.CourseNameStat> courses = new ArrayList<>();
+        Map<String, List<Booking>> byCourse = all.stream()
+                .collect(Collectors.groupingBy(b -> courseNames.getOrDefault(b.getCourseId(), "未知课程")));
+        for (Map.Entry<String, List<Booking>> e : byCourse.entrySet()) {
+            List<Booking> items = e.getValue();
+            int classes = (int) items.stream().filter(ReportService::consumed).count();
+            int canceled = (int) items.stream().filter(b -> Booking.CANCELED.equals(b.getStatus())).count();
+
+            List<ReportDtos.CourseCoachStat> coaches = new ArrayList<>();
+            Map<String, List<Booking>> byCoach = items.stream()
+                    .collect(Collectors.groupingBy(b -> coachNames.getOrDefault(b.getCoachId(), "未知教练")));
+            for (Map.Entry<String, List<Booking>> ce : byCoach.entrySet()) {
+                List<Booking> cs = ce.getValue();
+                coaches.add(new ReportDtos.CourseCoachStat(ce.getKey(), cs.size(),
+                        (int) cs.stream().filter(ReportService::consumed).count(),
+                        (int) cs.stream().filter(b -> Booking.CANCELED.equals(b.getStatus())).count()));
+            }
+            Comparator<ReportDtos.CourseCoachStat> cc = Comparator
+                    .comparingInt(ReportDtos.CourseCoachStat::classes).reversed();
+            coaches.sort(cc.thenComparing(Comparator.comparingInt(ReportDtos.CourseCoachStat::bookings).reversed())
+                    .thenComparing(ReportDtos.CourseCoachStat::coachName));
+
+            courses.add(new ReportDtos.CourseNameStat(e.getKey(), items.size(), classes, canceled,
+                    totalClasses == 0 ? 0 : round(classes * 100.0 / totalClasses), coaches));
+        }
+        Comparator<ReportDtos.CourseNameStat> nc = Comparator
+                .comparingInt(ReportDtos.CourseNameStat::classes).reversed();
+        courses.sort(nc.thenComparing(Comparator.comparingInt(ReportDtos.CourseNameStat::bookings).reversed())
+                .thenComparing(ReportDtos.CourseNameStat::courseName));
+
+        return new ReportDtos.CourseStats(r,
+                from == null ? "全部" : from.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
+                to == null ? "现在" : to.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
+                all.size(), totalClasses, totalCanceled, courses);
+    }
+
+    private static boolean consumed(Booking b) {
+        return Booking.CHECKED_IN.equals(b.getStatus()) || Booking.COMPLETED.equals(b.getStatus());
     }
 
     private List<ReportDtos.CoachRankItem> coachRank(List<Booking> bookings) {

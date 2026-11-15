@@ -41,4 +41,10 @@ public final class WechatDtos {
 
     public record NotifyLogVO(Long id, String scene, String openid, String status,
                               Integer errcode, String errmsg, String content, LocalDateTime createTime) {}
+
+    /** 公众号全局 access_token（供管理端调试/联调，如创建自定义菜单） */
+    public record AccessTokenVO(String accessToken, int expiresIn, String expireAt) {}
+
+    /** 可选：用外部 appid/secret 换 token，不写应用缓存 */
+    public record AccessTokenRequest(String appid, String secret) {}
 }

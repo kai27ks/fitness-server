@@ -30,4 +30,17 @@ public final class ReportDtos {
             double cancelRate,
             List<BarItem> dailyConsumed,
             List<CoachRankItem> coachRank) {}
+
+    /* ===== 课程统计：按课程名分组，再按教练细分 ===== */
+
+    /** 单个课程下某个教练的统计 */
+    public record CourseCoachStat(String coachName, int bookings, int classes, int canceled) {}
+
+    /** 单个课程名的统计；classPercent = 该课程消课占全部消课的百分比 */
+    public record CourseNameStat(String courseName, int bookings, int classes, int canceled,
+                                 double classPercent, List<CourseCoachStat> coaches) {}
+
+    public record CourseStats(String range, String from, String to,
+                              int totalBookings, int totalClasses, int totalCanceled,
+                              List<CourseNameStat> courses) {}
 }

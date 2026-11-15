@@ -30,9 +30,11 @@ app:
     open-hour: 9
     close-hour: 21
 
-# 本地连接微信测试号；凭据从 Git 忽略的 config/wechat-dev.properties 加载
+# 本地连接微信「接口测试号」wxdc874e48e6e85235（appid/secret 均为测试号凭据，可在测试号后台重置）
+# 优先级：环境变量 WX_APPID / WX_SECRET > config/wechat-dev.properties > 本文件默认值
 wx:
   appid: ${WX_APPID:wxdc874e48e6e85235}
+  secret: ${WX_SECRET:c16a801e5e8cb801136582c8d9ac51f9}
   mock: false
   # 花生壳 HTTPS → 本机 Vite 5173 → 后端 8080
   callback-base-url: ${WX_CALLBACK_BASE_URL:https://13230zl69xe33.vicp.fun}

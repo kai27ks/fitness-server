@@ -16,6 +16,7 @@ import org.springframework.web.client.RestTemplate;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Map;
@@ -68,6 +69,23 @@ public class WxApiClient {
         tokenExpireAt = null;
     }
 
+    /** token 及剩余有效期；未配置凭据或获取失败返回 null */
+    public record TokenInfo(String token, int expiresIn, LocalDateTime expireAt) {}
+
+    public TokenInfo tokenInfo() {
+        String token = accessToken();
+        if (token == null) return null;
+        LocalDateTime exp = tokenExpireAt;
+        int left = exp == null ? 0 : (int) Math.max(0, Duration.between(LocalDateTime.now(), exp).getSeconds());
+        return new TokenInfo(token, left, exp);
+    }
+
+    /** 用传入凭据直接换 token：不读缓存也不写缓存，避免顶掉应用正在用的 token */
+    public JsonNode fetchToken(String appid, String secret) {
+        return get("https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential"
+                + "&appid=" + enc(appid) + "&secret=" + enc(secret));
+    }
+
     /** 查询用户是否关注服务号；null 表示查询失败（不据此改库） */
     public Boolean subscribed(String openid) {
         String token = accessToken();
@@ -102,6 +120,18 @@ public class WxApiClient {
         }
     }
 
+    /** 创建自定义菜单（会整体覆盖旧菜单）；返回微信原始响应，null 表示未配置凭据 */
+    public JsonNode createMenu(JsonNode menu) {
+        return post("/cgi-bin/menu/create", menu);
+    }
+
+    /** 查询当前生效的自定义菜单 */
+    public JsonNode getMenu() {
+        String token = accessToken();
+        if (token == null) return null;
+        return get("https://api.weixin.qq.com/cgi-bin/menu/get?access_token=" + enc(token));
+    }
+
     /** 公众号服务器配置校验 / 事件推送验签 */
     public boolean verify(String signature, String timestamp, String nonce) {
         if (wx.getToken() == null || wx.getToken().isBlank()) return false;
@@ -116,6 +146,23 @@ public class WxApiClient {
             return sb.toString().equalsIgnoreCase(signature);
         } catch (Exception e) {
             return false;
+        }
+    }
+
+    private JsonNode post(String path, JsonNode body) {
+        String token = accessToken();
+        if (token == null) return null;
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<String> entity = new HttpEntity<>(body == null ? "{}" : body.toString(), headers);
+            String resp = restTemplate.postForObject(
+                    "https://api.weixin.qq.com" + path + "?access_token=" + enc(token),
+                    entity, String.class);
+            return resp == null ? null : objectMapper.readTree(resp);
+        } catch (Exception e) {
+            log.warn("微信接口调用失败: {}", e.getMessage());
+            return null;
         }
     }
 

@@ -8,6 +8,7 @@ import com.jianshenfang.service.ReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -34,5 +35,12 @@ public class DashboardController {
     public Result<ReportDtos.Courses> courses() {
         AuthUtil.requireAdmin();
         return Result.ok(reportService.courses());
+    }
+
+    /** 课程统计：range = total / month / week，按课程名分组并按教练细分 */
+    @GetMapping("/reports/course-stats")
+    public Result<ReportDtos.CourseStats> courseStats(@RequestParam(defaultValue = "total") String range) {
+        AuthUtil.requireAdmin();
+        return Result.ok(reportService.courseStats(range));
     }
 }
