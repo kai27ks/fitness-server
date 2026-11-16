@@ -5,6 +5,7 @@ import com.jianshenfang.auth.AuthContext;
 import com.jianshenfang.common.BusinessException;
 import com.jianshenfang.dto.AdminDtos;
 import com.jianshenfang.dto.CoachAccountDtos;
+import com.jianshenfang.dto.WechatDtos;
 import com.jianshenfang.entity.*;
 import com.jianshenfang.mapper.*;
 import lombok.RequiredArgsConstructor;
@@ -29,11 +30,27 @@ public class CoachAdminService {
     private final BookingMapper bookingMapper;
     private final OperationLogService logService;
     private final CoachAccountService accountService;
+    private final WechatBindService wechatBindService;
 
     public List<Coach> list(Long status) {
         LambdaQueryWrapper<Coach> w = new LambdaQueryWrapper<Coach>().orderByAsc(Coach::getId);
         if (status != null) w.eq(Coach::getStatus, status);
         return coachMapper.selectList(w);
+    }
+
+    /** 教练微信绑定状态 */
+    public WechatDtos.WechatBindVO wechatBind(Long coachId) {
+        Coach c = coachMapper.selectById(coachId);
+        if (c == null) throw new BusinessException("教练不存在");
+        return wechatBindService.bindInfoByUser(c.getUserId());
+    }
+
+    /** 管理端解绑教练微信：换人或离职时使用，解绑后教练需重新用密码绑定 */
+    public void unbindWechat(Long coachId) {
+        Coach c = coachMapper.selectById(coachId);
+        if (c == null) throw new BusinessException("教练不存在");
+        if (c.getUserId() == null) throw new BusinessException("该教练还没有登录账号");
+        wechatBindService.unbindCoach(c.getUserId(), coachId);
     }
 
     /** 当前登录教练（由 sys_user 反查 coach 记录） */

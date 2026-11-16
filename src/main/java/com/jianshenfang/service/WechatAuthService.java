@@ -13,6 +13,7 @@ import com.jianshenfang.entity.*;
 import com.jianshenfang.mapper.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -23,7 +24,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 公众号网页授权 + 手机号/认领码认领。
@@ -43,6 +46,15 @@ public class WechatAuthService {
     private static final String STATE = "STATE";
     private static final String CLAIM_TICKET = "CLAIM_TICKET";
 
+    private static final String ROLE_MEMBER = "MEMBER";
+    private static final String ROLE_COACH = "COACH";
+    /** 教练侧用静默授权：点菜单直接进，不弹「是否允许」 */
+    private static final String SCOPE_BASE = "snsapi_base";
+
+    /** 教练绑定密码失败限制：同 openid + 手机号 5 次锁 15 分钟（进程内，重启清零） */
+    private static final int COACH_CLAIM_MAX_FAIL = 5;
+    private static final long COACH_CLAIM_LOCK_SECONDS = 15 * 60;
+
     private final WxProperties wx;
     private final ObjectMapper objectMapper;
     private final WechatAccountMapper wechatAccountMapper;
@@ -51,25 +63,32 @@ public class WechatAuthService {
     private final WechatClaimRequestMapper claimRequestMapper;
     private final MemberMapper memberMapper;
     private final SysUserMapper userMapper;
+    private final CoachMapper coachMapper;
     private final AuthService authService;
     private final WechatBindService bindService;
     private final WxApiClient wxApiClient;
     private final OperationLogService logService;
     private final RestTemplate restTemplate = new RestTemplate();
+    private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+
+    /** 教练绑定失败计数：key = openid|phone */
+    private final Map<String, FailCounter> coachClaimFails = new ConcurrentHashMap<>();
 
     // ==================== 网页授权 ====================
 
     /** 真实模式：返回微信授权地址，由 Controller 302 */
-    public String buildAuthorizeUrl(String redirect) {
+    public String buildAuthorizeUrl(String redirect, String role) {
+        String r = normalizeRole(role);
         ObjectNode payload = objectMapper.createObjectNode();
         payload.put("redirect", safeRedirect(redirect));
+        payload.put("role", r);
         String state = issue(STATE, payload.toString(), wx.getStateTtlSeconds());
         String cb = enc(wx.getCallbackBaseUrl() + "/wechat/oauth/callback");
         return "https://open.weixin.qq.com/connect/oauth2/authorize"
                 + "?appid=" + enc(wx.getAppid())
                 + "&redirect_uri=" + cb
                 + "&response_type=code"
-                + "&scope=" + enc(wx.getScope())
+                + "&scope=" + enc(ROLE_COACH.equals(r) ? SCOPE_BASE : wx.getScope())
                 + "&state=" + enc(state)
                 + "#wechat_redirect";
     }
@@ -87,12 +106,14 @@ public class WechatAuthService {
     public String handleCallback(String code, String state) {
         JsonNode statePayload = consume(STATE, state);
         String redirect = statePayload.path("redirect").asText("/");
+        String role = normalizeRole(statePayload.path("role").asText(null));
         WechatDtos.Identity id = exchangeOpenid(code);
-        return finish(id, redirect);
+        return finish(id, redirect, role);
     }
 
     /** 授权完成（真实回调与 dev mock 共用）：已绑定直接带上 userId，未绑定走认领 */
-    public String finish(WechatDtos.Identity id, String redirect) {
+    public String finish(WechatDtos.Identity id, String redirect, String role) {
+        String intent = normalizeRole(role);
         WechatAccount bound = wechatAccountMapper.selectOne(new LambdaQueryWrapper<WechatAccount>()
                 .eq(WechatAccount::getAppid, id.appid())
                 .eq(WechatAccount::getOpenid, id.openid()));
@@ -103,6 +124,7 @@ public class WechatAuthService {
         payload.put("avatarUrl", id.avatarUrl());
         payload.put("nickname", id.nickname());
         payload.put("redirect", safeRedirect(redirect));
+        payload.put("intent", intent);
         if (bound != null) payload.put("userId", bound.getUserId());
         payload.put("subscribed", refreshSubscribe(id.openid(), bound));
         String ticket = issue(CLAIM_TICKET, payload.toString(), wx.getTicketTtlSeconds());
@@ -135,21 +157,30 @@ public class WechatAuthService {
         JsonNode p = consume(CLAIM_TICKET, ticket);
         long userId = p.path("userId").asLong(0L);
         String redirect = p.path("redirect").asText("/");
+        String intent = normalizeRole(p.path("intent").asText(null));
         if (userId > 0) {
             SysUser user = userMapper.selectById(userId);
             if (user == null || user.getStatus() == null || user.getStatus() != 1) {
                 throw new BusinessException("账号不可用，请联系前台");
             }
+            // 教练离职/停用后立即失效，不依赖前端拦截
+            if (ROLE_COACH.equals(user.getRole())) {
+                Coach coach = coachMapper.selectOne(new LambdaQueryWrapper<Coach>()
+                        .eq(Coach::getUserId, userId));
+                if (coach == null || coach.getStatus() == null || coach.getStatus() != 1) {
+                    throw new BusinessException("教练账号已停用，请联系店长");
+                }
+            }
             AuthDtos.LoginResponse login = authService.loginSuccess(user);
             return new WechatDtos.TicketResponse(login.token(), login.role(), login.name(),
                     login.memberId(), false, null, redirect, null, null,
-                    needFollow(p), wx.getQrcodeUrl());
+                    needFollow(p), wx.getQrcodeUrl(), null);
         }
         // 未绑定：换发一个有效期更长的认领票据，供绑定页提交
         String claimTicket = issue(CLAIM_TICKET, p.toString(), wx.getClaimTicketTtlSeconds());
         return new WechatDtos.TicketResponse(null, null, null, null,
                 true, claimTicket, redirect, text(p, "avatarUrl"), text(p, "nickname"),
-                needFollow(p), wx.getQrcodeUrl());
+                needFollow(p), wx.getQrcodeUrl(), intent);
     }
 
     private boolean needFollow(JsonNode p) {
@@ -211,6 +242,91 @@ public class WechatAuthService {
         return new WechatDtos.ClaimResponse(login.token(), login.role(), login.name(),
                 login.memberId(), wx.isNotifyEnabled() && !subscribed, wx.getQrcodeUrl());
     }
+
+    // ==================== 教练绑定 ====================
+
+    /**
+     * 教练侧首次绑定：必须用「手机号 + 密码」，不能用会员认领码。
+     * 校验顺序：票据 intent → 账号角色 → 密码 → 教练在职 → 绑定。
+     */
+    public WechatDtos.ClaimResponse coachClaim(WechatDtos.CoachClaimRequest req) {
+        JsonNode p = readTicket(CLAIM_TICKET, req.claimTicket());
+        if (!ROLE_COACH.equals(normalizeRole(p.path("intent").asText(null)))) {
+            throw new BusinessException("该凭证不是教练入口签发的，请从公众号「教练工作台」重新进入");
+        }
+        WechatDtos.Identity id = new WechatDtos.Identity(
+                text(p, "appid"), text(p, "openid"), text(p, "unionid"),
+                text(p, "avatarUrl"), text(p, "nickname"));
+        if (id.openid() == null || id.openid().isBlank()) {
+            throw new BusinessException("绑定凭证异常，请重新从公众号进入");
+        }
+        String phone = req.phone() == null ? "" : req.phone().trim();
+        if (!phone.matches("^1\\d{10}$")) throw new BusinessException("请输入正确的手机号");
+
+        String failKey = id.openid() + "|" + phone;
+        assertNotLocked(failKey);
+
+        SysUser user = userMapper.selectOne(new LambdaQueryWrapper<SysUser>().eq(SysUser::getPhone, phone));
+        if (user == null) throw new BusinessException("账号不存在，请联系店长开通教练账号");
+        if (user.getStatus() == null || user.getStatus() != 1) {
+            throw new BusinessException("账号已停用，请联系店长");
+        }
+        if (!ROLE_COACH.equals(user.getRole())) {
+            throw new BusinessException("该账号不是教练账号，请从公众号「会员中心」进入");
+        }
+        if (!encoder.matches(req.password(), user.getPassword())) {
+            recordFail(failKey);
+            throw new BusinessException("手机号或密码错误");
+        }
+        Coach coach = coachMapper.selectOne(new LambdaQueryWrapper<Coach>().eq(Coach::getUserId, user.getId()));
+        if (coach == null) throw new BusinessException("未找到教练档案，请联系店长");
+        if (coach.getStatus() == null || coach.getStatus() != 1) {
+            throw new BusinessException("教练账号已停用，请联系店长");
+        }
+
+        // 校验全部通过才核销票据，失败时允许在有效期内重试
+        consume(CLAIM_TICKET, req.claimTicket());
+        bindService.bindCoach(id, user.getId(), coach.getId());
+        coachClaimFails.remove(failKey);
+        logService.log("CLAIM_COACH", "COACH", coach.getId(), "教练微信绑定 openid=" + tail(id.openid()));
+
+        WechatAccount bound = wechatAccountMapper.selectOne(new LambdaQueryWrapper<WechatAccount>()
+                .eq(WechatAccount::getOpenid, id.openid()));
+        boolean subscribed = refreshSubscribe(id.openid(), bound);
+        AuthDtos.LoginResponse login = authService.loginSuccess(user);
+        return new WechatDtos.ClaimResponse(login.token(), login.role(), coach.getName(), null,
+                wx.isNotifyEnabled() && !subscribed, wx.getQrcodeUrl());
+    }
+
+    private void assertNotLocked(String key) {
+        FailCounter c = coachClaimFails.get(key);
+        if (c == null || c.until() == null) return;
+        if (LocalDateTime.now().isBefore(c.until())) {
+            throw new BusinessException("密码错误次数过多，请 15 分钟后再试");
+        }
+        coachClaimFails.remove(key);
+    }
+
+    private void recordFail(String key) {
+        coachClaimFails.compute(key, (k, v) -> {
+            int n = (v == null ? 0 : v.count()) + 1;
+            LocalDateTime until = n >= COACH_CLAIM_MAX_FAIL
+                    ? LocalDateTime.now().plusSeconds(COACH_CLAIM_LOCK_SECONDS) : null;
+            return new FailCounter(n, until);
+        });
+    }
+
+    private String normalizeRole(String role) {
+        String r = role == null ? "" : role.trim();
+        return ROLE_COACH.equalsIgnoreCase(r) ? ROLE_COACH : ROLE_MEMBER;
+    }
+
+    private String tail(String openid) {
+        if (openid == null || openid.length() <= 6) return "***";
+        return "***" + openid.substring(openid.length() - 6);
+    }
+
+    private record FailCounter(int count, LocalDateTime until) {}
 
     private void createClaimRequest(WechatDtos.Identity id, String phone) {
         try {

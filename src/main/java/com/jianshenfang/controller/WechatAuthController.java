@@ -30,4 +30,10 @@ public class WechatAuthController {
     public Result<WechatDtos.ClaimResponse> claim(@Valid @RequestBody WechatDtos.ClaimRequest req) {
         return Result.ok(wechatAuthService.claim(req));
     }
+
+    /** 教练侧首次绑定：只能用手机号 + 密码，票据必须来自「教练工作台」入口 */
+    @PostMapping("/coach-claim")
+    public Result<WechatDtos.ClaimResponse> coachClaim(@Valid @RequestBody WechatDtos.CoachClaimRequest req) {
+        return Result.ok(wechatAuthService.coachClaim(req));
+    }
 }

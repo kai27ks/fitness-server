@@ -28,7 +28,7 @@ public class WechatBindService {
     /** 会员自助认领：核销认领码后绑定 */
     @Transactional
     public void bind(WechatDtos.Identity id, Long userId, Long memberId, MemberClaimCode code) {
-        assertFree(id.openid(), userId);
+        assertFree(id.openid(), userId, "会员", "前台");
         insertAccount(id, userId);
         MemberClaimCode used = new MemberClaimCode();
         used.setId(code.getId());
@@ -41,10 +41,19 @@ public class WechatBindService {
     /** 教练/管理员核实身份后代绑：跳过认领码 */
     @Transactional
     public void bindByStaff(WechatDtos.Identity id, Long userId, Long memberId) {
-        assertFree(id.openid(), userId);
+        assertFree(id.openid(), userId, "会员", "前台");
         insertAccount(id, userId);
         logService.log("STAFF_BIND_WECHAT", "MEMBER", memberId,
                 "前台核实后代绑 openid=" + tail(id.openid()));
+    }
+
+    /** 教练自助绑定：账号密码校验已在 WechatAuthService 完成 */
+    @Transactional
+    public void bindCoach(WechatDtos.Identity id, Long userId, Long coachId) {
+        assertFree(id.openid(), userId, "账号", "店长");
+        insertAccount(id, userId);
+        logService.log("BIND_COACH_WECHAT", "COACH", coachId,
+                "教练自助绑定微信 openid=" + tail(id.openid()));
     }
 
     @Transactional
@@ -54,16 +63,33 @@ public class WechatBindService {
         logService.log("UNBIND_WECHAT", "MEMBER", memberId, "解绑微信");
     }
 
-    private void assertFree(String openid, Long userId) {
+    /** 管理端解绑教练微信 */
+    @Transactional
+    public void unbindCoach(Long userId, Long coachId) {
+        wechatAccountMapper.delete(new LambdaQueryWrapper<WechatAccount>()
+                .eq(WechatAccount::getUserId, userId));
+        logService.log("UNBIND_COACH_WECHAT", "COACH", coachId, "管理端解绑教练微信");
+    }
+
+    /** 查询某账号绑定的微信（教练详情页用） */
+    public WechatDtos.WechatBindVO bindInfoByUser(Long userId) {
+        if (userId == null) return new WechatDtos.WechatBindVO(false, null, null, null);
+        WechatAccount wa = wechatAccountMapper.selectOne(new LambdaQueryWrapper<WechatAccount>()
+                .eq(WechatAccount::getUserId, userId));
+        if (wa == null) return new WechatDtos.WechatBindVO(false, null, null, null);
+        return new WechatDtos.WechatBindVO(true, tail(wa.getOpenid()), wa.getNickname(), wa.getAvatarUrl());
+    }
+
+    private void assertFree(String openid, Long userId, String who, String contact) {
         Long byOpenid = wechatAccountMapper.selectCount(new LambdaQueryWrapper<WechatAccount>()
                 .eq(WechatAccount::getOpenid, openid));
         if (byOpenid != null && byOpenid > 0) {
-            throw new BusinessException("该微信已绑定其他会员，请联系前台");
+            throw new BusinessException("该微信已绑定其他" + who + "，请联系" + contact);
         }
         Long byUser = wechatAccountMapper.selectCount(new LambdaQueryWrapper<WechatAccount>()
                 .eq(WechatAccount::getUserId, userId));
         if (byUser != null && byUser > 0) {
-            throw new BusinessException("该会员已绑定其他微信，请联系前台");
+            throw new BusinessException("该" + who + "已绑定其他微信，请联系" + contact);
         }
     }
 

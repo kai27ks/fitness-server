@@ -22,14 +22,18 @@ public class WechatOauthController {
     private final WechatAuthService wechatAuthService;
     private final WxProperties wx;
 
+    /**
+     * @param role MEMBER（默认，snsapi_userinfo）/ COACH（snsapi_base 静默授权）
+     */
     @GetMapping("/wechat/oauth/entry")
     public void entry(@RequestParam(required = false) String redirect,
+                      @RequestParam(required = false) String role,
                       @RequestParam(required = false) String mockOpenid,
                       HttpServletResponse response) throws IOException {
         try {
             String target = wx.isMock()
-                    ? wechatAuthService.finish(wechatAuthService.mockIdentity(mockOpenid), redirect)
-                    : wechatAuthService.buildAuthorizeUrl(redirect);
+                    ? wechatAuthService.finish(wechatAuthService.mockIdentity(mockOpenid), redirect, role)
+                    : wechatAuthService.buildAuthorizeUrl(redirect, role);
             response.sendRedirect(target);
         } catch (BusinessException e) {
             response.sendRedirect(wechatAuthService.errorUrl(e.getMessage()));

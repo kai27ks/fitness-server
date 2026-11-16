@@ -4,6 +4,7 @@ import com.jianshenfang.auth.AuthContext;
 import com.jianshenfang.auth.AuthUtil;
 import com.jianshenfang.common.Result;
 import com.jianshenfang.dto.AdminDtos;
+import com.jianshenfang.dto.WechatDtos;
 import com.jianshenfang.service.CoachAdminService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +33,21 @@ public class CoachAdminController {
     public Result<Void> update(@PathVariable Long id, @Valid @RequestBody AdminDtos.CoachUpdate req) {
         AuthUtil.requireAdmin();
         coachService.update(id, req);
+        return Result.ok();
+    }
+
+    /** 教练微信绑定状态 */
+    @GetMapping("/admin/coaches/{id}/wechat-bind")
+    public Result<WechatDtos.WechatBindVO> wechatBind(@PathVariable Long id) {
+        AuthUtil.requireAdmin();
+        return Result.ok(coachService.wechatBind(id));
+    }
+
+    /** 解绑教练微信（教练侧免密登录失效，需重新绑定） */
+    @DeleteMapping("/admin/coaches/{id}/wechat-bind")
+    public Result<Void> unbindWechat(@PathVariable Long id) {
+        AuthUtil.requireAdmin();
+        coachService.unbindWechat(id);
         return Result.ok();
     }
 

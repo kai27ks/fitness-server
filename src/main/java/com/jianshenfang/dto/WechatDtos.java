@@ -18,15 +18,24 @@ public final class WechatDtos {
             @NotBlank(message = "手机号不能为空") String phone,
             @NotBlank(message = "认领码不能为空") String claimCode) {}
 
-    /** needClaim=true 跳 /wechat/bind；needFollow=true 跳 /wechat/follow（可跳过） */
+    /**
+     * needClaim=true 跳绑定页：intent=COACH 跳 /wechat/coach-bind，否则 /wechat/bind；
+     * needFollow=true 跳 /wechat/follow（可跳过）
+     */
     public record TicketResponse(String token, String role, String name, Long memberId,
                                  boolean needClaim, String claimTicket, String redirect,
                                  String avatarUrl, String nickname,
-                                 boolean needFollow, String qrcodeUrl) {}
+                                 boolean needFollow, String qrcodeUrl, String intent) {}
 
     /** 认领成功：签发既有账号 JWT，并告知是否需要引导关注 */
     public record ClaimResponse(String token, String role, String name, Long memberId,
                                 boolean needFollow, String qrcodeUrl) {}
+
+    /** 教练绑定微信：必须用账号密码（不能用会员的认领码） */
+    public record CoachClaimRequest(
+            @NotBlank(message = "绑定票据不能为空") String claimTicket,
+            @NotBlank(message = "手机号不能为空") String phone,
+            @NotBlank(message = "密码不能为空") String password) {}
 
     public record ClaimCodeVO(Long memberId, String code, LocalDateTime expireAt, boolean used) {}
 
