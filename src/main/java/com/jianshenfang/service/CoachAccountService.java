@@ -115,8 +115,8 @@ public class CoachAccountService {
     }
 
     private void requirePassword(String password) {
-        if (password == null || password.isBlank() || password.length() < 8 || password.length() > 64) {
-            throw new BusinessException("请设置8～64位密码");
+        if (password == null || password.isBlank() || password.length() < 6 || password.length() > 64) {
+            throw new BusinessException("请设置6～64位密码");
         }
         if (password.getBytes(StandardCharsets.UTF_8).length > 72) {
             throw new BusinessException("密码过长，请减少字符数量");

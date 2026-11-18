@@ -127,19 +127,22 @@ public class ReportService {
     }
 
     /**
-     * 课程统计：按课程名称分组，可切换「总计 / 本月 / 本周」，组内再按教练细分。
+     * 课程统计：按课程名称分组，可切换「当日 / 本周 / 本月 / 总计」，组内再按教练细分。
      *
      * <p>口径：以 booking 为准，classes = 已消课（CHECKED_IN / COMPLETED），bookings = 预约总数（含取消），
      * canceled = 取消数；按 classes 从高到低排序，课程名与教练名取自主档表，取不到时降级为「未知课程 / 未知教练」。
      */
     public ReportDtos.CourseStats courseStats(String range) {
         String r = (range == null || range.isBlank()) ? "total" : range.trim().toLowerCase();
-        if (!"month".equals(r) && !"week".equals(r)) r = "total";
+        if (!"day".equals(r) && !"month".equals(r) && !"week".equals(r)) r = "total";
 
         LocalDate today = LocalDate.now();
         LocalDateTime from = null;
         LocalDateTime to = null;
-        if ("week".equals(r)) {
+        if ("day".equals(r)) {
+            from = today.atStartOfDay();
+            to = today.atTime(23, 59, 59);
+        } else if ("week".equals(r)) {
             LocalDate monday = today.with(DayOfWeek.MONDAY);
             from = monday.atStartOfDay();
             to = monday.plusDays(6).atTime(23, 59, 59);

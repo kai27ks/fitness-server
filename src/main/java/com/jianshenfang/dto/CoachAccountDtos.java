@@ -19,5 +19,5 @@ public final class CoachAccountDtos {
 
     public record ResetPassword(
             @NotBlank(message = "请设置新密码")
-            @Size(min = 8, max = 64, message = "新密码需为8～64位") String newPassword) {}
+            @Size(min = 6, max = 64, message = "新密码需为6～64位") String newPassword) {}
 }
