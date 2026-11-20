@@ -7,6 +7,7 @@ import com.jianshenfang.service.MemberService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -31,5 +32,12 @@ public class MemberController {
     @GetMapping("/me")
     public Result<MemberDtos.MeResponse> me() {
         return Result.ok(memberService.me(AuthContext.userId()));
+    }
+
+    /** 课时流水（购买 / 消课 / 调整），会员只能看自己的 */
+    @GetMapping("/session-logs")
+    public Result<List<MemberDtos.SessionLogVO>> sessionLogs(@RequestParam(required = false) Long packageId,
+                                                             @RequestParam(required = false) Integer limit) {
+        return Result.ok(memberService.mySessionLogs(AuthContext.userId(), packageId, limit));
     }
 }

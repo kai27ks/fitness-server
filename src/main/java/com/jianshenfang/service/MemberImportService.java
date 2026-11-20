@@ -11,6 +11,7 @@ import com.jianshenfang.entity.LegacyImportBatch;
 import com.jianshenfang.entity.LegacyImportRow;
 import com.jianshenfang.entity.Member;
 import com.jianshenfang.entity.MemberPackage;
+import com.jianshenfang.entity.MemberSessionLog;
 import com.jianshenfang.entity.SysUser;
 import com.jianshenfang.mapper.CoachMapper;
 import com.jianshenfang.mapper.CourseTemplateMapper;
@@ -72,6 +73,7 @@ public class MemberImportService {
     private final LegacyImportRowMapper importRowMapper;
     private final WechatAdminService wechatAdminService;
     private final OperationLogService logService;
+    private final SessionLogService sessionLogService;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
     /* ==================== 预览 ==================== */
@@ -203,6 +205,9 @@ public class MemberImportService {
                 for (MemberPackage pkg : pkgs) {
                     pkg.setMemberId(m.getId());
                     packageMapper.insert(pkg);
+                    sessionLogService.record(m.getId(), pkg.getId(), null, pkg.getCourseId(), pkg.getCoachId(),
+                            MemberSessionLog.IMPORT, pkg.getTotalSessions(), pkg.getRemainSessions(),
+                            "旧数据导入课包（批次 " + batchId + "）");
                 }
                 // 按课种回填课包 id，供原始行归档（pkgs 与 plan.pkgs() 顺序一致）
                 for (int i = 0; i < plan.pkgs().size(); i++) {

@@ -303,6 +303,27 @@ CREATE TABLE IF NOT EXISTS wechat_notify_log (
     KEY idx_scene_time (scene, create_time)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT '公众号模板消息发送与幂等记录';
 
+-- ===== 会员课包课时流水（消费记录） =====
+-- 所有改动 member_package.remain_sessions 的业务都应写一条流水：
+--   CONSUME 上课签到扣减 / PURCHASE 购买或续购 / ADJUST 管理端调整 / IMPORT 旧数据导入
+CREATE TABLE IF NOT EXISTS member_session_log (
+    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+    member_id       BIGINT       NOT NULL COMMENT 'member.id',
+    package_id      BIGINT       NULL COMMENT 'member_package.id',
+    booking_id      BIGINT       NULL COMMENT 'booking.id（签到扣课关联）',
+    course_id       BIGINT       NULL COMMENT 'course_template.id',
+    coach_id        BIGINT       NULL,
+    type            VARCHAR(20)  NOT NULL COMMENT 'CONSUME/PURCHASE/ADJUST/IMPORT',
+    change_sessions INT          NOT NULL COMMENT '正数增加，负数扣减',
+    remain_after    INT          NULL COMMENT '变动后剩余课时，历史回填可能为空',
+    remark          VARCHAR(200) NULL,
+    operator_id     BIGINT       NULL COMMENT '操作人 sys_user.id，会员自助场景为空',
+    create_time     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_member_time (member_id, create_time),
+    KEY idx_package (package_id),
+    KEY idx_booking (booking_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT '会员课包课时流水';
+
 -- 注意：项目无 Flyway/Liquibase，CREATE TABLE IF NOT EXISTS 不会给已存在的表加列。
 -- 若 dev 库在加 subscribed 字段之前已初始化过 wechat_account，需手工执行一次：
 -- ALTER TABLE wechat_account

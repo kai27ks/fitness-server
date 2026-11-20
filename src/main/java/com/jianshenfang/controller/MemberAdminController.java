@@ -60,6 +60,15 @@ public class MemberAdminController {
         return Result.ok(memberService.addPackage(id, req));
     }
 
+    /** 某会员的课时流水（管理端，可按课包过滤） */
+    @GetMapping("/{id}/session-logs")
+    public Result<?> sessionLogs(@PathVariable Long id,
+                                 @RequestParam(required = false) Long packageId,
+                                 @RequestParam(required = false) Integer limit) {
+        AuthUtil.requireStaff();
+        return Result.ok(memberService.sessionLogs(id, packageId, limit));
+    }
+
     @PostMapping("/packages/{pid}/adjust")
     public Result<Void> adjust(@PathVariable Long pid, @RequestBody AdminDtos.AdjustSessions req) {
         AuthUtil.requireAdmin();

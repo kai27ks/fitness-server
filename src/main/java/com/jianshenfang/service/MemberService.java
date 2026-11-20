@@ -24,6 +24,7 @@ public class MemberService {
     private final MemberPackageMapper packageMapper;
     private final BookingMapper bookingMapper;
     private final WechatAccountMapper wechatAccountMapper;
+    private final SessionLogService sessionLogService;
 
     @Value("${app.studio.name}") private String studioName;
     @Value("${app.studio.address}") private String studioAddress;
@@ -92,6 +93,12 @@ public class MemberService {
                         .eq(MemberPackage::getMemberId, member.getId())
                         .orderByDesc(MemberPackage::getRemainSessions))
                 .stream().map(this::toInfo).toList();
+    }
+
+    /** 我的课时流水（可按课包过滤），会员只能看自己的记录 */
+    public List<MemberDtos.SessionLogVO> mySessionLogs(Long userId, Long packageId, Integer limit) {
+        Member member = currentMember(userId);
+        return sessionLogService.list(member.getId(), packageId, limit);
     }
 
     public MemberDtos.MeResponse me(Long userId) {

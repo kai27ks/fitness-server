@@ -3,6 +3,7 @@ package com.jianshenfang.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.jianshenfang.common.BusinessException;
 import com.jianshenfang.dto.AdminDtos;
+import com.jianshenfang.dto.MemberDtos;
 import com.jianshenfang.dto.WechatDtos;
 import com.jianshenfang.entity.*;
 import com.jianshenfang.mapper.*;
@@ -31,6 +32,7 @@ public class AdminMemberService {
     private final MemberPackageMapper packageMapper;
     private final BookingMapper bookingMapper;
     private final OperationLogService logService;
+    private final SessionLogService sessionLogService;
     private final WechatAdminService wechatAdminService;
     private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
@@ -259,6 +261,9 @@ public class AdminMemberService {
             }
             exist.setStatus("ACTIVE");
             packageMapper.updateById(exist);
+            sessionLogService.record(memberId, exist.getId(), null, exist.getCourseId(), exist.getCoachId(),
+                    MemberSessionLog.PURCHASE, sessions, exist.getRemainSessions(),
+                    "续购并入 " + sessions + " 节（" + (price.compareTo(BigDecimal.ZERO) > 0 ? "¥" + price.toPlainString() : "未填金额") + "）");
             logService.log("ADD_PACKAGE", "MEMBER_PACKAGE", exist.getId(), "增购并入 " + sessions + " 节");
             return exist;
         }
@@ -277,6 +282,9 @@ public class AdminMemberService {
         } catch (org.springframework.dao.DuplicateKeyException e) {
             throw new BusinessException("该课程课包已存在，请刷新后重试");
         }
+        sessionLogService.record(memberId, p.getId(), null, p.getCourseId(), p.getCoachId(),
+                MemberSessionLog.PURCHASE, sessions, p.getRemainSessions(),
+                "新购课包 " + sessions + " 节（" + (price.compareTo(BigDecimal.ZERO) > 0 ? "¥" + price.toPlainString() : "未填金额") + "）");
         logService.log("ADD_PACKAGE", "MEMBER_PACKAGE", p.getId(), "新增课包 " + sessions + " 节");
         return p;
     }
@@ -288,7 +296,18 @@ public class AdminMemberService {
         if (newRemain < 0) throw new BusinessException("剩余课时不足扣减");
         p.setRemainSessions(newRemain);
         packageMapper.updateById(p);
+        sessionLogService.record(p.getMemberId(), packageId, null, p.getCourseId(), p.getCoachId(),
+                MemberSessionLog.ADJUST, req.delta(), newRemain,
+                "管理端" + (req.delta() > 0 ? "增加 " : "扣减 ") + Math.abs(req.delta()) + " 节"
+                        + (req.remark() == null || req.remark().isBlank() ? "" : "：" + req.remark()));
         logService.log("ADJUST_SESSIONS", "MEMBER_PACKAGE", packageId,
                 (req.delta() > 0 ? "增加 " : "扣减 ") + Math.abs(req.delta()) + " 节：" + req.remark());
+    }
+
+    /** 某会员的课时流水（管理端查看） */
+    public List<MemberDtos.SessionLogVO> sessionLogs(Long memberId, Long packageId, Integer limit) {
+        Member m = memberMapper.selectById(memberId);
+        if (m == null) throw new BusinessException("会员不存在");
+        return sessionLogService.list(memberId, packageId, limit);
     }
 }

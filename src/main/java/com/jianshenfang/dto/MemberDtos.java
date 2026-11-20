@@ -17,4 +17,9 @@ public final class MemberDtos {
 
     public record MeResponse(String name, String phone, String coachName, String avatarUrl,
                              int remainSessions, int consumedSessions, int upcoming, int packageCount) {}
+
+    /** 课包课时流水：changeSessions 正数增加、负数扣减；remainAfter 为变动后剩余（历史数据可能为空） */
+    public record SessionLogVO(Long id, String type, int changeSessions, Integer remainAfter,
+                               Long packageId, Long memberId, String courseName, String coachName,
+                               String bookingTime, String remark, String createTime) {}
 }

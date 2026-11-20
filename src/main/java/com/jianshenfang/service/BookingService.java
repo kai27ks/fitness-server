@@ -43,6 +43,7 @@ public class BookingService {
     private final MemberPackageMapper packageMapper;
     private final MemberService memberService;
     private final NotifyService notifyService;
+    private final SessionLogService sessionLogService;
 
     @Value("${app.studio.open-hour:9}") private int openHour;
     @Value("${app.studio.close-hour:21}") private int closeHour;
@@ -256,6 +257,10 @@ public class BookingService {
                     "课时异常：预约 " + bookingId + " 已补签但课包剩余不足，请人工核对。");
         } else {
             MemberPackage pkg = packageMapper.selectById(booking.getPackageId());
+            // 补签是管理端手工操作，流水要能区分来源
+            sessionLogService.record(booking.getMemberId(), booking.getPackageId(), booking.getId(),
+                    booking.getCourseId(), booking.getCoachId(), MemberSessionLog.CONSUME, -1,
+                    pkg == null ? null : pkg.getRemainSessions(), "管理端补签扣减 1 节");
             Member member = memberMapper.selectById(booking.getMemberId());
             if (member != null) {
                 notifyService.send("AUTO_CHECKIN", member.getPhone(), bookingId,
@@ -332,6 +337,10 @@ public class BookingService {
                     Member member = memberMapper.selectById(b.getMemberId());
                     CourseTemplate course = courseMapper.selectById(b.getCourseId());
                     String courseName = course == null ? "课程" : course.getName();
+                    sessionLogService.record(b.getMemberId(), b.getPackageId(), b.getId(),
+                            b.getCourseId(), b.getCoachId(), MemberSessionLog.CONSUME, -1,
+                            pkg == null ? null : pkg.getRemainSessions(),
+                            "上课签到扣减 1 节（" + courseName + " " + b.getStartTime().format(FMT) + "）");
                     if (member != null) {
                         notifyService.send("AUTO_CHECKIN", member.getPhone(), b.getId(),
                                 "已自动签到：" + courseName + " " + b.getStartTime().format(FMT)
