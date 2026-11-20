@@ -48,6 +48,7 @@ public class WechatAuthService {
 
     private static final String ROLE_MEMBER = "MEMBER";
     private static final String ROLE_COACH = "COACH";
+    private static final String ROLE_ADMIN = "ADMIN";
     /** 教练侧用静默授权：点菜单直接进，不弹「是否允许」 */
     private static final String SCOPE_BASE = "snsapi_base";
 
@@ -151,6 +152,12 @@ public class WechatAuthService {
         return wx.getH5BaseUrl() + "/wechat/entry?error=" + enc(message);
     }
 
+    /** 带入口角色的错误页：重试时仍按进入时的身份（教练/管理员 vs 会员）重新授权 */
+    public String errorUrl(String message, String role) {
+        String url = errorUrl(message);
+        return ROLE_COACH.equalsIgnoreCase(role == null ? "" : role.trim()) ? url + "&role=COACH" : url;
+    }
+
     // ==================== 票据换登录态 ====================
 
     public WechatDtos.TicketResponse exchangeTicket(String ticket) {
@@ -246,8 +253,9 @@ public class WechatAuthService {
     // ==================== 教练绑定 ====================
 
     /**
-     * 教练侧首次绑定：必须用「手机号 + 密码」，不能用会员认领码。
-     * 校验顺序：票据 intent → 账号角色 → 密码 → 教练在职 → 绑定。
+     * 管理端首次绑定：必须用「手机号 + 密码」，不能用会员认领码。
+     * COACH 与 ADMIN 都允许从「教练工作台」入口绑定；管理员可以没有教练档案。
+     * 校验顺序：票据 intent → 账号角色 → 密码 → 教练在职（有档案时）→ 绑定。
      */
     public WechatDtos.ClaimResponse coachClaim(WechatDtos.CoachClaimRequest req) {
         JsonNode p = readTicket(CLAIM_TICKET, req.claimTicket());
@@ -267,34 +275,39 @@ public class WechatAuthService {
         assertNotLocked(failKey);
 
         SysUser user = userMapper.selectOne(new LambdaQueryWrapper<SysUser>().eq(SysUser::getPhone, phone));
-        if (user == null) throw new BusinessException("账号不存在，请联系店长开通教练账号");
+        if (user == null) throw new BusinessException("账号不存在，请联系店长开通账号");
         if (user.getStatus() == null || user.getStatus() != 1) {
             throw new BusinessException("账号已停用，请联系店长");
         }
-        if (!ROLE_COACH.equals(user.getRole())) {
-            throw new BusinessException("该账号不是教练账号，请从公众号「会员中心」进入");
+        String role = user.getRole();
+        if (!ROLE_COACH.equals(role) && !ROLE_ADMIN.equals(role)) {
+            throw new BusinessException("该账号不是教练或管理员账号，请从公众号「会员中心」进入");
         }
         if (!encoder.matches(req.password(), user.getPassword())) {
             recordFail(failKey);
             throw new BusinessException("手机号或密码错误");
         }
+        // 教练必须有一份在职档案；管理员可以没有教练档案，绑定后仍以 ADMIN 身份进工作台
         Coach coach = coachMapper.selectOne(new LambdaQueryWrapper<Coach>().eq(Coach::getUserId, user.getId()));
-        if (coach == null) throw new BusinessException("未找到教练档案，请联系店长");
-        if (coach.getStatus() == null || coach.getStatus() != 1) {
+        if (ROLE_COACH.equals(role) && coach == null) throw new BusinessException("未找到教练档案，请联系店长");
+        // 只有教练本人受在职状态约束；管理员即使关联了已停用的教练档案，仍可用管理员身份绑定
+        if (ROLE_COACH.equals(role) && coach != null && (coach.getStatus() == null || coach.getStatus() != 1)) {
             throw new BusinessException("教练账号已停用，请联系店长");
         }
 
         // 校验全部通过才核销票据，失败时允许在有效期内重试
         consume(CLAIM_TICKET, req.claimTicket());
-        bindService.bindCoach(id, user.getId(), coach.getId());
+        Long coachId = coach == null ? null : coach.getId();
+        bindService.bindCoach(id, user.getId(), coachId);
         coachClaimFails.remove(failKey);
-        logService.log("CLAIM_COACH", "COACH", coach.getId(), "教练微信绑定 openid=" + tail(id.openid()));
+        logService.log("CLAIM_COACH", coach == null ? "ADMIN" : "COACH", coachId,
+                (coach == null ? "管理员" : "教练") + "微信绑定 openid=" + tail(id.openid()));
 
         WechatAccount bound = wechatAccountMapper.selectOne(new LambdaQueryWrapper<WechatAccount>()
                 .eq(WechatAccount::getOpenid, id.openid()));
         boolean subscribed = refreshSubscribe(id.openid(), bound);
         AuthDtos.LoginResponse login = authService.loginSuccess(user);
-        return new WechatDtos.ClaimResponse(login.token(), login.role(), coach.getName(), null,
+        return new WechatDtos.ClaimResponse(login.token(), login.role(), coach == null ? "管理员" : coach.getName(), null,
                 wx.isNotifyEnabled() && !subscribed, wx.getQrcodeUrl());
     }
 

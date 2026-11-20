@@ -36,7 +36,7 @@ public class WechatOauthController {
                     : wechatAuthService.buildAuthorizeUrl(redirect, role);
             response.sendRedirect(target);
         } catch (BusinessException e) {
-            response.sendRedirect(wechatAuthService.errorUrl(e.getMessage()));
+            response.sendRedirect(wechatAuthService.errorUrl(e.getMessage(), role));
         }
     }
 
