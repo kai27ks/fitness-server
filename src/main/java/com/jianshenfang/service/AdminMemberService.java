@@ -297,7 +297,7 @@ public class AdminMemberService {
         p.setRemainSessions(newRemain);
         packageMapper.updateById(p);
         sessionLogService.record(p.getMemberId(), packageId, null, p.getCourseId(), p.getCoachId(),
-                MemberSessionLog.ADJUST, req.delta(), newRemain,
+                MemberSessionLog.ADJUST, req.delta().intValue(), newRemain,
                 "管理端" + (req.delta() > 0 ? "增加 " : "扣减 ") + Math.abs(req.delta()) + " 节"
                         + (req.remark() == null || req.remark().isBlank() ? "" : "：" + req.remark()));
         logService.log("ADJUST_SESSIONS", "MEMBER_PACKAGE", packageId,
