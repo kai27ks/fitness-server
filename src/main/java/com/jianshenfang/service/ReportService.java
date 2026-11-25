@@ -78,21 +78,41 @@ public class ReportService {
                 monthMemberCount, monthClassCount, todayRevenue, monthRevenue, showRevenue, upcoming, revenue7d, coachRank(monthBookings));
     }
 
-    public ReportDtos.Finance finance() {
-        LocalDateTime monthStart = LocalDate.now().withDayOfMonth(1).atStartOfDay();
-        double totalRevenue = packageMapper.sumPrice(LocalDate.of(2000, 1, 1).atStartOfDay(), LocalDateTime.now()).doubleValue();
-        double monthRevenue = packageMapper.sumPrice(monthStart, LocalDateTime.now()).doubleValue();
+    /**
+     * 财务营收：按课包购买时间统计，range = day / week / month / total。
+     * 四个营收口径一并返回，前端切换只换显示值；会员消费排行按所选 range 聚合。
+     */
+    public ReportDtos.Finance finance(String range) {
+        String r = (range == null || range.isBlank()) ? "month" : range.trim().toLowerCase();
+        if (!"day".equals(r) && !"week".equals(r) && !"month".equals(r)) r = "total";
+
+        LocalDate today = LocalDate.now();
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime todayStart = today.atStartOfDay();
+        LocalDateTime weekStart = today.with(DayOfWeek.MONDAY).atStartOfDay();
+        LocalDateTime monthStart = today.withDayOfMonth(1).atStartOfDay();
+        LocalDateTime allStart = LocalDate.of(2000, 1, 1).atStartOfDay();
+
+        double totalRevenue = packageMapper.sumPrice(allStart, now).doubleValue();
+        double todayRevenue = packageMapper.sumPrice(todayStart, now).doubleValue();
+        double weekRevenue = packageMapper.sumPrice(weekStart, now).doubleValue();
+        double monthRevenue = packageMapper.sumPrice(monthStart, now).doubleValue();
 
         List<ReportDtos.BarItem> daily = new ArrayList<>();
-        LocalDate today = LocalDate.now();
         for (int i = 6; i >= 0; i--) {
             LocalDate d = today.minusDays(i);
             BigDecimal v = packageMapper.sumPrice(d.atStartOfDay(), d.plusDays(1).atStartOfDay());
             daily.add(new ReportDtos.BarItem(d.format(DateTimeFormatter.ofPattern("MM-dd")), v.doubleValue()));
         }
 
+        LocalDateTime rankFrom = switch (r) {
+            case "day" -> todayStart;
+            case "week" -> weekStart;
+            case "month" -> monthStart;
+            default -> allStart;
+        };
         List<Object> topMembers = packageMapper.selectList(new LambdaQueryWrapper<MemberPackage>()
-                .ge(MemberPackage::getCreateTime, monthStart))
+                .ge(MemberPackage::getCreateTime, rankFrom))
                 .stream().collect(Collectors.groupingBy(MemberPackage::getMemberId, Collectors.summingDouble(p -> p.getTotalPrice().doubleValue())))
                 .entrySet().stream().sorted((a, b) -> Double.compare(b.getValue(), a.getValue())).limit(5)
                 .map(e -> {
@@ -103,7 +123,7 @@ public class ReportService {
                     return (Object) map;
                 }).toList();
 
-        return new ReportDtos.Finance(totalRevenue, monthRevenue, daily, topMembers);
+        return new ReportDtos.Finance(r, totalRevenue, todayRevenue, weekRevenue, monthRevenue, daily, topMembers);
     }
 
     public ReportDtos.Courses courses() {

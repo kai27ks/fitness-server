@@ -25,10 +25,11 @@ public class DashboardController {
         return Result.ok(reportService.dashboard(showRevenue));
     }
 
+    /** 财务营收：range = day / week / month / total（营收四项一并返回，排行按 range 聚合） */
     @GetMapping("/reports/finance")
-    public Result<ReportDtos.Finance> finance() {
+    public Result<ReportDtos.Finance> finance(@RequestParam(defaultValue = "month") String range) {
         AuthUtil.requireAdmin();
-        return Result.ok(reportService.finance());
+        return Result.ok(reportService.finance(range));
     }
 
     @GetMapping("/reports/courses")

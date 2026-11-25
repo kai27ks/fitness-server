@@ -21,9 +21,11 @@ public final class BookingDtos {
 
     public record SlotsResponse(String date, int durationMin, int remainSessions, List<Slot> slots) {}
 
+    /** rating：本单已提交的满意度（1~5），未评价或课程未结束为 null */
     public record BookingVO(Long id, String courseName, String coachName,
                             String startTime, String endTime, String status,
-                            String cancelBy, String cancelReason, boolean cancellable) {}
+                            String cancelBy, String cancelReason, boolean cancellable,
+                            Long coachId, Integer rating) {}
 
     public record CreateSuccess(Long bookingId, int remainSessions) {}
 

@@ -18,6 +18,8 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 约课核心业务。
@@ -44,6 +46,7 @@ public class BookingService {
     private final MemberService memberService;
     private final NotifyService notifyService;
     private final SessionLogService sessionLogService;
+    private final CoachReviewMapper coachReviewMapper;
 
     @Value("${app.studio.open-hour:9}") private int openHour;
     @Value("${app.studio.close-hour:21}") private int closeHour;
@@ -207,8 +210,12 @@ public class BookingService {
         } else if ("DONE".equals(tab)) {
             wrapper.in(Booking::getStatus, Booking.CHECKED_IN, Booking.COMPLETED);
         }
+        Map<Long, Integer> ratings = coachReviewMapper.selectList(new LambdaQueryWrapper<CoachReview>()
+                        .eq(CoachReview::getMemberId, member.getId()))
+                .stream().filter(r -> r.getBookingId() != null && r.getRating() != null)
+                .collect(Collectors.toMap(CoachReview::getBookingId, CoachReview::getRating, (a, b) -> a));
         return bookingMapper.selectList(wrapper).stream()
-                .map(b -> toVO(b, member.getId()))
+                .map(b -> toVO(b, member.getId(), ratings.get(b.getId())))
                 .toList();
     }
 
@@ -299,7 +306,7 @@ public class BookingService {
         }).toList();
     }
 
-    private BookingDtos.BookingVO toVO(Booking b, Long memberId) {
+    private BookingDtos.BookingVO toVO(Booking b, Long memberId, Integer rating) {
         CourseTemplate course = courseMapper.selectById(b.getCourseId());
         Coach coach = coachMapper.selectById(b.getCoachId());
         LocalDateTime now = LocalDateTime.now();
@@ -311,7 +318,8 @@ public class BookingService {
                 coach == null ? "教练" : coach.getName(),
                 b.getStartTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")),
                 b.getEndTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")),
-                b.getStatus(), b.getCancelBy(), b.getCancelReason(), cancellable);
+                b.getStatus(), b.getCancelBy(), b.getCancelReason(), cancellable,
+                b.getCoachId(), rating);
     }
 
     /**

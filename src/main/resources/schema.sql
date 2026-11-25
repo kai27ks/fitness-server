@@ -324,6 +324,20 @@ CREATE TABLE IF NOT EXISTS member_session_log (
     KEY idx_booking (booking_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT '会员课包课时流水';
 
+-- ===== 会员对教练的五星满意度评价 =====
+CREATE TABLE IF NOT EXISTS coach_review (
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+    member_id   BIGINT  NOT NULL COMMENT 'member.id',
+    coach_id    BIGINT  NOT NULL COMMENT 'coach.id',
+    booking_id  BIGINT  NOT NULL COMMENT 'booking.id，一次课只能评一次',
+    rating      TINYINT NOT NULL COMMENT '满意度 1~5 星',
+    create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_booking (booking_id),
+    KEY idx_coach_time (coach_id, create_time),
+    KEY idx_member (member_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT '会员对教练的满意度评价';
+
 -- 注意：项目无 Flyway/Liquibase，CREATE TABLE IF NOT EXISTS 不会给已存在的表加列。
 -- 若 dev 库在加 subscribed 字段之前已初始化过 wechat_account，需手工执行一次：
 -- ALTER TABLE wechat_account

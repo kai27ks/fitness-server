@@ -19,8 +19,15 @@ public final class ReportDtos {
             List<BarItem> revenue7d,
             List<CoachRankItem> coachRank) {}
 
+    /**
+     * 财务营收：range = day / week / month / total，四种口径都返回，前端切换不用再发请求；
+     * topMembers 按 range 的时间窗聚合。
+     */
     public record Finance(
+            String range,
             double totalRevenue,
+            double todayRevenue,
+            double weekRevenue,
             double monthRevenue,
             List<BarItem> dailyRevenue,
             List<Object> topMembers) {}
