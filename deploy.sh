@@ -8,6 +8,7 @@
 #   ./deploy.sh --frontend-only        # 只换 dist（不重启后端）
 #   ./deploy.sh --incoming /path       # 指定产物目录
 #   ./deploy.sh --help
+#   sudo tail -F /var/log/fitness/app.log  # 在另一个 SSH 窗口实时看应用启动日志
 #
 # 统一使用 ubuntu 账号，不再单独创建 app 用户。CI / 本地先把产物放到服务器的 ~/incoming/：
 #   scp target/app.jar ubuntu@<IP>:~/incoming/app.jar
@@ -41,6 +42,7 @@ APP_DIR=/opt/fitness
 WEB_DIR=/var/www/fitness
 BACKUP_DIR=/var/backups/fitness/deploy
 SERVICE=fitness
+APP_LOG=/var/log/fitness/app.log
 JAR_NAME=app.jar
 HEALTH_URL=http://127.0.0.1:8080/api/courses
 KEEP=3                       # 保留最近几份备份，防止磁盘涨满
@@ -110,6 +112,17 @@ RESTART_CMD=(systemctl restart "$SERVICE")
 SNAPSHOT="$BACKUP_DIR/$(date +%Y%m%d-%H%M%S)-$$"   # 带 PID，避免同秒并发撞名
 mkdir -p "$SNAPSHOT"
 
+show_startup_logs() {
+  # 只在交互终端显示应用日志，避免把生产日志写入 CI 输出。
+  [[ -t 2 ]] || return 0
+
+  journalctl -u "$SERVICE" -n 30 --no-pager >&2 || true
+  if [[ -r "$APP_LOG" ]]; then
+    printf '\n--- %s ---\n' "$APP_LOG" >&2
+    tail -n 60 "$APP_LOG" >&2 || true
+  fi
+}
+
 rollback() {
   log "部署失败，开始回滚到上一版"
   if (( DEPLOY_BACKEND )) && [[ -f "$SNAPSHOT/app.jar" ]]; then
@@ -127,7 +140,7 @@ rollback() {
   if (( DEPLOY_BACKEND )); then
     "${RESTART_CMD[@]}" || true
   fi
-  die "已回滚，请检查日志：sudo journalctl -u $SERVICE -n 50 --no-pager"
+  die "已回滚。应用日志：sudo tail -n 100 $APP_LOG；服务日志：sudo journalctl -u $SERVICE -n 50 --no-pager"
 }
 
 # ---------- 1. 备份当前版本 ----------
@@ -156,19 +169,23 @@ if (( DEPLOY_FRONTEND )); then
   mkdir -p "$STAGE"
   cp -a "$NEW_DIST"/. "$STAGE"/
   [[ -f "$STAGE/index.html" ]] || rollback
+  # dist 整目录替换时需要重建 ACME 路径，并让 Ubuntu 的 Nginx worker 可读取静态文件。
+  mkdir -p "$STAGE/.well-known/acme-challenge"
+  chown -hR root:www-data "$STAGE"
+  find "$STAGE" -type d -exec chmod 0750 {} +
+  find "$STAGE" -type f -exec chmod 0640 {} +
+  runuser -u www-data -- test -r "$STAGE/index.html" \
+    || die "Nginx 用户 www-data 无法读取 $STAGE/index.html，请检查目录权限"
   mv "$WEB_DIR" "$OLD_WEB"
   mv "$STAGE" "$WEB_DIR" || rollback
   rm -rf "$OLD_WEB"
-  # dist 是整目录原子替换，会把 ACME 验证目录一起冲掉；
-  # 这里重建，避免以后 certbot 申请/续期时 404。
-  mkdir -p "$WEB_DIR/.well-known/acme-challenge"
   log "前端 dist 已替换"
 fi
 
 # ---------- 4. 重启 + 健康检查 ----------
 if (( DEPLOY_BACKEND )); then
   log "重启 $SERVICE ..."
-  "${RESTART_CMD[@]}" || rollback
+  "${RESTART_CMD[@]}" || { show_startup_logs; rollback; }
 
   # /api/** 被 AuthInterceptor 拦截，未登录返回 401 属正常；
   # 200/401/403/404 都说明「后端已起来且鉴权生效」，不能用 curl -f 判断。
@@ -180,7 +197,11 @@ if (( DEPLOY_BACKEND )); then
   done
   case "$CODE" in
     200|401|403|404) log "后端健康检查通过（HTTP $CODE）" ;;
-    *) log "健康检查未通过（HTTP ${CODE:-无响应}）"; rollback ;;
+    *)
+      log "健康检查未通过（HTTP ${CODE:-无响应}）"
+      show_startup_logs
+      rollback
+      ;;
   esac
 fi
 

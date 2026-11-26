@@ -41,4 +41,13 @@ public class ReviewController {
         Coach coach = coachAdminService.currentCoach();
         return Result.ok(reviewService.coachReviews(coach.getId(), limit));
     }
+
+    /** 管理端点评记录：全部点评分页，可按教练过滤（会员姓名不脱敏，带手机号） */
+    @GetMapping("/admin/reviews")
+    public Result<ReviewDtos.AdminReviewPage> adminReviews(@RequestParam(required = false) Long coachId,
+                                                           @RequestParam(required = false) Integer page,
+                                                           @RequestParam(required = false) Integer size) {
+        AuthUtil.requireAdmin();
+        return Result.ok(reviewService.adminReviews(coachId, page, size));
+    }
 }

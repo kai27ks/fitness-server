@@ -16,4 +16,12 @@ public final class ReviewDtos {
                              String coachName, String bookingTime, String createTime) {}
 
     public record CoachReviewPage(CoachRating summary, List<ReviewItem> items) {}
+
+    /** 管理端单条点评：会员姓名不脱敏，并带手机号便于定位 */
+    public record AdminReviewItem(Long id, String memberName, String memberPhone, String coachName,
+                                  String courseName, int rating, String bookingTime, String createTime) {}
+
+    /** 管理端点评分页：summary 为当前筛选范围（全部 / 指定教练）的汇总 */
+    public record AdminReviewPage(int total, int page, int size,
+                                  CoachRating summary, List<AdminReviewItem> items) {}
 }
