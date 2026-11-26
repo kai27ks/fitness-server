@@ -31,6 +31,7 @@ class WechatAuthServiceTest {
     @Mock private WechatClaimRequestMapper requests;
     @Mock private MemberMapper members;
     @Mock private SysUserMapper users;
+    @Mock private CoachMapper coaches;
     @Mock private AuthService auth;
     @Mock private WechatBindService bind;
     @Mock private WxApiClient wxApi;
@@ -46,7 +47,7 @@ class WechatAuthServiceTest {
         WxProperties wx = new WxProperties();
         wx.setMock(true);
         service = new WechatAuthService(wx, new ObjectMapper(), accounts, codes, tickets,
-                requests, members, users, auth, bind, wxApi, logs);
+                requests, members, users, coaches, auth, bind, wxApi, logs);
         ticket = new WechatTempToken();
         ticket.setToken("ticket");
         ticket.setType("CLAIM_TICKET");

@@ -29,13 +29,15 @@ class BookingCreationTest {
     @Mock MemberPackageMapper packages;
     @Mock MemberService memberService;
     @Mock NotifyService notifications;
+    @Mock SessionLogService sessionLogService;
+    @Mock CoachReviewMapper coachReviewMapper;
     BookingService service;
     Member member;
     MemberPackage pkg;
     CourseTemplate course;
     Coach coach;
     @BeforeEach void setup() {
-        service = new BookingService(bookings, members, coaches, leaves, courses, packages, memberService, notifications);
+        service = new BookingService(bookings, members, coaches, leaves, courses, packages, memberService, notifications, sessionLogService, coachReviewMapper);
         ReflectionTestUtils.setField(service, "openHour", 9); ReflectionTestUtils.setField(service, "closeHour", 21);
         member = new Member(); member.setId(1L); member.setUserId(11L); member.setCoachId(3L); member.setName("会员"); member.setPhone("13800138000");
         pkg = new MemberPackage(); pkg.setId(10L); pkg.setMemberId(1L); pkg.setCourseId(5L); pkg.setStatus("ACTIVE"); pkg.setRemainSessions(5);

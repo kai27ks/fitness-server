@@ -42,7 +42,7 @@ jobs:
       - name: 上传并部署
         env:
           HOST: '123.206.230.38'
-          USER: 'app'
+          USER: 'ubuntu'
           PORT: '22'
         run: |
           set -euo pipefail
@@ -56,13 +56,16 @@ jobs:
           scp -P "$PORT" "${SSH_OPT[@]}" \
             target/app.jar "$TARGET:~/incoming/app.jar"
 
-          # 3) 同步最新部署脚本，保证服务器上的脚本不与仓库分叉
+          # 3) 同步最新部署脚本，保证服务器上的脚本不与仓库分叉。
+          #    /opt/fitness 属主是 root，ubuntu 不能直接 scp 进去，
+          #    先落到家目录，第 4 步再用 sudo 安装到位。
           scp -P "$PORT" "${SSH_OPT[@]}" \
-            deploy.sh "$TARGET:/opt/fitness/deploy.sh"
+            deploy.sh "$TARGET:~/incoming/deploy.sh"
 
           # 4) 只换后端：备份 → 替换 → 重启 → 健康检查（失败自动回滚）
+          #    -n 表示 sudo 免密，需要密码时立刻失败而不是卡住等输入
           ssh -p "$PORT" "${SSH_OPT[@]}" "$TARGET" \
-            'chmod 750 /opt/fitness/deploy.sh && /opt/fitness/deploy.sh --backend-only'
+            'sudo -n install -m 755 -o root -g root ~/incoming/deploy.sh /opt/fitness/deploy.sh && sudo -n /opt/fitness/deploy.sh --backend-only'
 
       - name: 保留产物便于排查
         if: success()

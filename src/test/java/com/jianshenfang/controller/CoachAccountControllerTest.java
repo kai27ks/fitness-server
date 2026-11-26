@@ -70,7 +70,7 @@ class CoachAccountControllerTest {
         mvc.perform(post("/api/admin/coaches/3/account").header("Authorization", "Bearer ADMIN").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"mode\":\"CREATE\",\"phone\":\"123\"}")).andExpect(jsonPath("$.code").value(400));
         mvc.perform(put("/api/admin/coaches/3/account/password").header("Authorization", "Bearer ADMIN").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"newPassword\":\"123456\"}")).andExpect(jsonPath("$.code").value(400));
+                .content("{\"newPassword\":\"12345\"}")).andExpect(jsonPath("$.code").value(400));
         verifyNoInteractions(service);
     }
 }

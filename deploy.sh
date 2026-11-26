@@ -9,16 +9,20 @@
 #   ./deploy.sh --incoming /path       # 指定产物目录
 #   ./deploy.sh --help
 #
-# CI / 本地先把产物放到服务器的 ~/incoming/：
-#   scp target/app.jar app@<IP>:~/incoming/app.jar
-#   scp -r ../vue3-jianshenfang/dist/* app@<IP>:~/incoming/dist/
-#   ssh app@<IP> "/opt/fitness/deploy.sh"
+# 统一使用 ubuntu 账号，不再单独创建 app 用户。CI / 本地先把产物放到服务器的 ~/incoming/：
+#   scp target/app.jar ubuntu@<IP>:~/incoming/app.jar
+#   scp -r ../vue3-jianshenfang/dist/* ubuntu@<IP>:~/incoming/dist/
+#   ssh ubuntu@<IP> "sudo /opt/fitness/deploy.sh"
 #
-# 首次部署前置（一次性）：
-#   sudo scp deploy.sh app@<IP>:/opt/fitness/deploy.sh
-#   sudo chown app:app /opt/fitness/deploy.sh && sudo chmod 750 /opt/fitness/deploy.sh
-#   # app 用户免密重启服务，否则 CI 里 sudo 会卡在输密码：
-#   sudo visudo  →  app ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart fitness
+# 非 root 执行时脚本会自动 sudo 提权重入（/opt/fitness、/var/www 均为 root 属主），
+# 所以 ubuntu 直接 ./deploy.sh 也能跑，不需要手工 chown。CI 场景需 sudo 免密：
+#   腾讯云 Ubuntu 镜像的 ubuntu 用户默认已是 NOPASSWD，若被改过用 sudo visudo 确认。
+#
+# 首次部署前置（一次性，全部在 ubuntu 下执行）：
+#   sudo mkdir -p /opt/fitness /var/www/fitness /var/backups/fitness/deploy /var/log/fitness
+#   sudo cp deploy.sh /opt/fitness/deploy.sh && sudo chmod 755 /opt/fitness/deploy.sh
+#   # 应用以 ubuntu 身份运行，上传目录和日志要归它，否则运行时写不进去：
+#   sudo chown -R ubuntu:ubuntu /opt/fitness/upload /var/log/fitness
 #
 # 设计约定：
 #   - 构建在 CI / 开发机做，服务器只做「换包 + 重启」，避免 2C4G 上跑 Maven/npm 导致 OOM
@@ -28,6 +32,11 @@
 # ==============================================================================
 set -Eeuo pipefail
 
+# --help 不该为了看文档还要提权，先拦掉（放在任何环境探测之前）
+case "${1:-}" in
+  -h|--help) sed -n '2,/^set -Eeuo pipefail/p' "$0" | sed '$d'; exit 0 ;;
+esac
+
 APP_DIR=/opt/fitness
 WEB_DIR=/var/www/fitness
 BACKUP_DIR=/var/backups/fitness/deploy
@@ -36,19 +45,32 @@ JAR_NAME=app.jar
 HEALTH_URL=http://127.0.0.1:8080/api/courses
 KEEP=3                       # 保留最近几份备份，防止磁盘涨满
 
-INCOMING="${INCOMING_DIR:-$HOME/incoming}"
+# 提权后 $HOME 会变成 /root，产物目录必须按「发起部署的账号」解析回它的 ~/incoming，
+# 否则 sudo 之后会跑去 /root/incoming 找文件。
+REAL_USER="${SUDO_USER:-$(id -un)}"
+REAL_HOME="$(getent passwd "$REAL_USER" | cut -d: -f6 || true)"
+INCOMING="${INCOMING_DIR:-${REAL_HOME:-/root}/incoming}"
 DEPLOY_BACKEND=1
 DEPLOY_FRONTEND=1
 
 log()  { printf '[%s] %s\n' "$(date '+%F %T')" "$*"; }
 die()  { printf '[%s] ERROR: %s\n' "$(date '+%F %T')" "$*" >&2; exit 1; }
 
+# /opt/fitness 与 /var/www 都是 root 属主，非 root 直接跑会 Permission denied；
+# 这里自动提权重入，ubuntu 用户不必切换账号，也不用手工 chown 目标目录。
+if [[ $EUID -ne 0 ]]; then
+  command -v sudo >/dev/null 2>&1 || die "当前非 root 且没有 sudo，请改用 root 执行"
+  SELF="$(readlink -f "$0")"
+  log "以 $(id -un) 身份发起，自动提权执行"
+  exec sudo INCOMING_DIR="${INCOMING_DIR:-}" bash "$SELF" "$@"
+fi
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --backend-only)  DEPLOY_FRONTEND=0; shift ;;
     --frontend-only) DEPLOY_BACKEND=0;  shift ;;
     --incoming)      [[ $# -ge 2 ]] || die "--incoming 缺少路径"; INCOMING="$2"; shift 2 ;;
-    -h|--help)       sed -n '2,32p' "$0"; exit 0 ;;
+    -h|--help)       sed -n '2,/^set -Eeuo pipefail/p' "$0" | sed '$d'; exit 0 ;;
     *) die "未知参数: $1（用 --help 查看用法）" ;;
   esac
 done
@@ -82,12 +104,8 @@ if (( DEPLOY_FRONTEND )); then
   [[ -f "$NEW_DIST/index.html" ]] || die "缺少前端产物 $NEW_DIST/index.html"
 fi
 
-# root 直接调 systemctl；app 用户走 sudo -n（需上面 visudo 授权）
-if [[ $EUID -eq 0 ]]; then
-  RESTART_CMD=(systemctl restart "$SERVICE")
-else
-  RESTART_CMD=(sudo -n systemctl restart "$SERVICE")
-fi
+# 走到这里必定是 root（见上文自动提权），无需 sudo -n
+RESTART_CMD=(systemctl restart "$SERVICE")
 
 SNAPSHOT="$BACKUP_DIR/$(date +%Y%m%d-%H%M%S)-$$"   # 带 PID，避免同秒并发撞名
 mkdir -p "$SNAPSHOT"

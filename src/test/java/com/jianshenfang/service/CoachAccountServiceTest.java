@@ -138,7 +138,7 @@ class CoachAccountServiceTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"", "123456", "        "})
+    @ValueSource(strings = {"", "12345", "        "})
     void rejectsWeakOrMissingInitialPassword(String password) {
         lockCoach();
         assertThrows(BusinessException.class, () -> service.configure(3L,
